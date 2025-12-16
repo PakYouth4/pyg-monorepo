@@ -1,0 +1,33 @@
+name: Sync Backend to HuggingFace
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'my-heavy-backend/**'
+
+jobs:
+  sync-to-huggingface:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to HuggingFace
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cd my-heavy-backend
+          git init
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+          git remote add huggingface https://PakYouth:$HF_TOKEN@huggingface.co/spaces/PakYouth/InsightBackEnd
+          git fetch huggingface
+          git checkout -b main
+          git add .
+          git commit -m "Auto-sync from GitHub: $(date)" || echo "No changes"
+          git push huggingface main --force
