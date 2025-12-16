@@ -22,6 +22,7 @@ import { storeSourceEmbeddings, semanticSearch, findSimilarResearch, getResearch
 import { runDeepAnalysis } from './lib/groqDeepAnalysis';
 import { generateContentIdeas } from './lib/groqContentIdeas';
 import { assembleReport } from './lib/reportAssembler';
+import { runPreflightChecks } from './lib/utils';
 
 dotenv.config();
 
@@ -33,7 +34,18 @@ const PORT = process.env.PORT || 7860; // Hugging Face Spaces default port
 
 // --- HEALTH CHECK ---
 app.get('/', (req, res) => {
-    res.send('Heavy Backend V3.9 (Final Report) Online 🚀');
+    res.send('Heavy Backend V4.0 (Production Ready) Online 🚀');
+});
+
+// --- PREFLIGHT CHECK ---
+app.get('/v2/preflight', async (req, res) => {
+    try {
+        const result = await runPreflightChecks();
+        res.json(result);
+    } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        res.status(500).json({ canProceed: false, error: (e as any).message });
+    }
 });
 
 // ... (omitted)
