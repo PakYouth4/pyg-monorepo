@@ -19,6 +19,7 @@ import { classifyVideosGroq, filterKeptVideos } from './lib/groqClassify';
 import { mergeKnowledgeBase, enrichSourcesWithGroq } from './lib/knowledgeBase';
 import { normalizeSources } from './lib/groqNormalize';
 import { storeSourceEmbeddings, semanticSearch, findSimilarResearch, getResearchHistory } from './lib/embeddings';
+import { runDeepAnalysis } from './lib/groqDeepAnalysis';
 
 dotenv.config();
 
@@ -30,7 +31,7 @@ const PORT = process.env.PORT || 7860; // Hugging Face Spaces default port
 
 // --- HEALTH CHECK ---
 app.get('/', (req, res) => {
-    res.send('Heavy Backend V3.6 (Semantic Memory) Online 🚀');
+    res.send('Heavy Backend V3.7 (Deep Analysis) Online 🚀');
 });
 
 // ... (omitted)
@@ -176,6 +177,30 @@ app.post('/v2/step10-normalize', async (req, res) => {
 
     } catch (e) {
         console.error("V2 Step 10 Normalize Error:", e);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        res.status(500).json({ error: (e as any).message });
+    }
+});
+
+// --- V2: STEP 11 (DEEP ANALYSIS) ---
+app.post('/v2/step11-analyze', async (req, res) => {
+    try {
+        const { topic, sources } = req.body;
+
+        if (!topic || !sources || !Array.isArray(sources)) {
+            return res.status(400).json({ error: "Topic and sources array are required" });
+        }
+
+        console.log(`Running deep analysis for "${topic}" with ${sources.length} sources...`);
+
+        const analysis = await runDeepAnalysis(topic, sources);
+
+        console.log(`Deep Analysis Complete. Grade: ${analysis.quality_metrics.confidence_grade}`);
+
+        res.json(analysis);
+
+    } catch (e) {
+        console.error("V2 Step 11 Analyze Error:", e);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         res.status(500).json({ error: (e as any).message });
     }
