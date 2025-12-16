@@ -34,5 +34,55 @@
 - playai-tts-arabic
 
 
-##OpenRouter Available Models
+# OPENROUTER FREE MODELS (34 total)
+# Limits: ~200 req/day, reset monthly. Add :free suffix to model ID.
 
+## Meta Llama
+- meta-llama/llama-3.3-70b-instruct:free    # 131K context ⭐
+- meta-llama/llama-3.2-3b-instruct:free     # 131K context
+
+## Google
+- google/gemini-2.0-flash-exp:free          # 1M context ⭐
+- google/gemma-3-27b-it:free                # 131K context
+- google/gemma-3-12b-it:free                # 32K context
+- google/gemma-3-4b-it:free                 # 32K context
+- google/gemma-3n-e4b-it:free               # 8K context
+- google/gemma-3n-e2b-it:free               # 8K context
+
+## Qwen (Alibaba)
+- qwen/qwen3-235b-a22b:free                 # 131K context ⭐
+- qwen/qwen3-coder:free                     # 262K context
+- qwen/qwen3-4b:free                        # 41K context
+
+## Mistral
+- mistralai/devstral-2512:free              # 262K context
+- mistralai/mistral-small-3.1-24b-instruct:free  # 128K context
+- mistralai/mistral-7b-instruct:free        # 32K context
+
+## NVIDIA
+- nvidia/nemotron-3-nano-30b-a3b:free       # 256K context
+- nvidia/nemotron-nano-12b-v2-vl:free       # 128K context (vision)
+- nvidia/nemotron-nano-9b-v2:free           # 128K context
+
+## OpenAI (OSS)
+- openai/gpt-oss-120b:free                  # 131K context
+- openai/gpt-oss-20b:free                   # 131K context
+
+## Reasoning/Think Models
+- tngtech/deepseek-r1t-chimera:free         # 164K context
+- tngtech/deepseek-r1t2-chimera:free        # 164K context
+- tngtech/tng-r1t-chimera:free              # 164K context
+- allenai/olmo-3.1-32b-think:free           # 65K context
+- allenai/olmo-3-32b-think:free             # 65K context
+
+## Other Free
+- amazon/nova-2-lite-v1:free                # 1M context ⭐
+- nousresearch/hermes-3-llama-3.1-405b:free # 131K context
+- nex-agi/deepseek-v3.1-nex-n1:free         # 131K context
+- alibaba/tongyi-deepresearch-30b-a3b:free  # 131K context
+- xiaomi/mimo-v2-flash:free                 # 262K context
+- kwaipilot/kat-coder-pro:free              # 256K context
+- z-ai/glm-4.5-air:free                     # 131K context
+- moonshotai/kimi-k2:free                   # 32K context
+- arcee-ai/trinity-mini:free                # 131K context
+- cognitivecomputations/dolphin-mistral-24b-venice-edition:free  # 32K (uncensored)
