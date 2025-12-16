@@ -74,22 +74,28 @@ Generate 3-4 Instagram Reel ideas.
 - Base each idea on a specific fact
 </requirements>
 
-<schema>
+<avoid>
+- Don't trivialize serious topics
+- Don't use insensitive language about casualties
+- Don't create misinformation or exaggeration
+</avoid>
+
+<example>
 [{
   "id": "reel_1",
   "platform": "instagram_reel",
-  "hook": "string (<=10 words)",
-  "script": "string (15-30s)",
-  "key_message": "string",
-  "visual_style": "string",
-  "sensitivity_level": "standard|cautious|sensitive",
-  "ethical_notes": ["string"],
-  "source_reference": "string",
-  "priority": 1-5,
-  "call_to_action": "string",
-  "hashtags": ["string"]
+  "hook": "Nobody's talking about this",
+  "script": "While everyone is focused on X, here's what they're not telling you about Y. The facts are: [fact]. This matters because [reason]. Share this and follow for more.",
+  "key_message": "The mainstream narrative is missing key context",
+  "visual_style": "News footage montage with bold text overlays",
+  "sensitivity_level": "cautious",
+  "ethical_notes": ["Verify footage authenticity", "Credit original sources"],
+  "source_reference": "100 casualties reported - article_1",
+  "priority": 2,
+  "call_to_action": "Share this with someone who needs to know",
+  "hashtags": ["#awareness", "#truth", "#news"]
 }]
-</schema>`;
+</example>`;
 
     try {
         const response = await callGroqWithFallback({

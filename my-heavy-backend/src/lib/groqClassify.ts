@@ -54,13 +54,21 @@ Classify each video for research report inclusion.
 - keep=false for clickbait, music videos, unrelated content
 </rules>
 
-<schema>
+<avoid>
+- Don't keep videos with clickbait titles like "YOU WON'T BELIEVE..."
+- Don't keep music videos, compilations, or reaction videos
+- Don't keep videos older than 2 years for breaking news topics
+</avoid>
+
+<example>
 {
   "classifications": [
-    {"video_id": "VIDEO_1", "keep": boolean, "score": 0-100, "reason": "string"}
+    {"video_id": "VIDEO_1", "keep": true, "score": 85, "reason": "Al Jazeera news report, directly covers topic"},
+    {"video_id": "VIDEO_2", "keep": false, "score": 25, "reason": "Music video compilation, not informative"}
   ]
 }
-</schema>`;
+</example>`;
+
 
     try {
         const text = await callGroqWithFallback({

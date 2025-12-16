@@ -183,22 +183,30 @@ Provide comprehensive geopolitical analysis.
 </task>
 
 <steps>
-1. Summarize the situation (2-3 paragraphs)
-2. Identify key actors (governments, groups, individuals)
-3. Analyze power dynamics
-4. Assess regional/global implications
-5. List major claims with source citations
+1. First, identify WHO the main actors are
+2. Then, analyze WHAT each actor wants (motivations)
+3. Next, examine the power balance between them
+4. Finally, assess broader regional/global implications
 </steps>
 
-<schema>
+<avoid>
+- Don't make unsupported claims without citing sources
+- Don't oversimplify complex conflicts into good vs evil
+- Don't ignore minor but influential actors
+</avoid>
+
+<example>
 {
-  "summary": "2-3 paragraphs",
-  "key_actors": [{"name": "string", "role": "string", "motivations": ["string"]}],
-  "power_dynamics": "string",
-  "regional_implications": "string",
-  "claims": [{"claim": "string", "source_ids": ["article_1"]}]
+  "summary": "The conflict has escalated significantly since... Regional powers have responded by... The humanitarian situation continues to deteriorate...",
+  "key_actors": [
+    {"name": "Government Forces", "role": "State military", "motivations": ["Territorial control", "Regime survival"]},
+    {"name": "Opposition Group", "role": "Armed resistance", "motivations": ["Political representation", "Regional autonomy"]}
+  ],
+  "power_dynamics": "Currently favors X due to Y...",
+  "regional_implications": "Neighboring countries face refugee flows and potential spillover...",
+  "claims": [{"claim": "Over 100 casualties reported", "source_ids": ["article_1", "video_2"]}]
 }
-</schema>`;
+</example>`;
 
     try {
         const response = await callGroqWithFallback({
