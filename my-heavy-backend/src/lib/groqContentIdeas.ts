@@ -259,15 +259,14 @@ export async function generateContentIdeas(
 ): Promise<ContentIdeasResult> {
     console.log(`[ContentIdeas] Generating content ideas for: "${analysis.topic}"`);
 
-    // Generate all content types in parallel
-    const [reelIdeas, carouselIdeas, threadIdeas] = await Promise.all([
+    // Generate Instagram content types in parallel (Reels + Carousels only)
+    const [reelIdeas, carouselIdeas] = await Promise.all([
         generateReelIdeas(analysis.topic, analysis),
-        generateCarouselIdeas(analysis.topic, analysis),
-        generateTwitterThread(analysis.topic, analysis)
+        generateCarouselIdeas(analysis.topic, analysis)
     ]);
 
     // Combine all ideas
-    const allIdeas = [...reelIdeas, ...carouselIdeas, ...threadIdeas];
+    const allIdeas = [...reelIdeas, ...carouselIdeas];
 
     // Sort by priority
     allIdeas.sort((a, b) => a.priority - b.priority);
