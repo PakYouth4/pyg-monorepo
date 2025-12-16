@@ -105,7 +105,7 @@ Example:
 
         const parsed = JSON.parse(response);
         const normalized: CanonicalSource[] = (Array.isArray(parsed) ? parsed : [parsed]).map((item: Record<string, unknown>, idx: number) => ({
-            id: item.id || `article_${idx + 1}`,
+            id: String(item.id || `article_${idx + 1}`),
             type: 'article' as const,
             title: String(item.title || ''),
             url: String(item.url || ''),
@@ -178,7 +178,7 @@ OUTPUT MUST BE A VALID JSON ARRAY. NO MARKDOWN. NO EXPLANATION.`;
 
         const parsed = JSON.parse(response);
         const normalized: CanonicalSource[] = (Array.isArray(parsed) ? parsed : [parsed]).map((item: Record<string, unknown>, idx: number) => ({
-            id: item.id || `video_${idx + 1}`,
+            id: String(item.id || `video_${idx + 1}`),
             type: 'video' as const,
             title: String(item.title || ''),
             url: String(item.url || `https://youtube.com/watch?v=${videos[idx]?.videoId}`),
