@@ -20,6 +20,7 @@ import { mergeKnowledgeBase, enrichSourcesWithGroq } from './lib/knowledgeBase';
 import { normalizeSources } from './lib/groqNormalize';
 import { storeSourceEmbeddings, semanticSearch, findSimilarResearch, getResearchHistory } from './lib/embeddings';
 import { runDeepAnalysis } from './lib/groqDeepAnalysis';
+import { generateContentIdeas } from './lib/groqContentIdeas';
 
 dotenv.config();
 
@@ -31,7 +32,7 @@ const PORT = process.env.PORT || 7860; // Hugging Face Spaces default port
 
 // --- HEALTH CHECK ---
 app.get('/', (req, res) => {
-    res.send('Heavy Backend V3.7 (Deep Analysis) Online 🚀');
+    res.send('Heavy Backend V3.8 (Content Ideas) Online 🚀');
 });
 
 // ... (omitted)
@@ -201,6 +202,30 @@ app.post('/v2/step11-analyze', async (req, res) => {
 
     } catch (e) {
         console.error("V2 Step 11 Analyze Error:", e);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        res.status(500).json({ error: (e as any).message });
+    }
+});
+
+// --- V2: STEP 12 (CONTENT IDEAS) ---
+app.post('/v2/step12-content', async (req, res) => {
+    try {
+        const { analysis } = req.body;
+
+        if (!analysis || !analysis.topic) {
+            return res.status(400).json({ error: "Deep analysis object is required" });
+        }
+
+        console.log(`Generating content ideas for "${analysis.topic}"...`);
+
+        const contentIdeas = await generateContentIdeas(analysis);
+
+        console.log(`Generated ${contentIdeas.stats.total_ideas} content ideas`);
+
+        res.json(contentIdeas);
+
+    } catch (e) {
+        console.error("V2 Step 12 Content Error:", e);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         res.status(500).json({ error: (e as any).message });
     }
