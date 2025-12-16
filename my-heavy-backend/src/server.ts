@@ -18,6 +18,7 @@ import { verifyVideosGroq } from './lib/groqVerify';
 import { classifyVideosGroq, filterKeptVideos } from './lib/groqClassify';
 import { mergeKnowledgeBase, enrichSourcesWithGroq } from './lib/knowledgeBase';
 import { normalizeSources } from './lib/groqNormalize';
+import { storeSourceEmbeddings, semanticSearch, findSimilarResearch, getResearchHistory } from './lib/embeddings';
 
 dotenv.config();
 
@@ -29,7 +30,7 @@ const PORT = process.env.PORT || 7860; // Hugging Face Spaces default port
 
 // --- HEALTH CHECK ---
 app.get('/', (req, res) => {
-    res.send('Heavy Backend V3.5 (Source Normalization) Online 🚀');
+    res.send('Heavy Backend V3.6 (Semantic Memory) Online 🚀');
 });
 
 // ... (omitted)
@@ -175,6 +176,119 @@ app.post('/v2/step10-normalize', async (req, res) => {
 
     } catch (e) {
         console.error("V2 Step 10 Normalize Error:", e);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        res.status(500).json({ error: (e as any).message });
+    }
+});
+
+// --- EMBEDDINGS: STORE ---
+app.post('/v2/embeddings/store', async (req, res) => {
+    try {
+        const { sources, topic } = req.body;
+
+        if (!sources || !Array.isArray(sources) || !topic) {
+            return res.status(400).json({ error: "Sources array and topic are required" });
+        }
+
+        console.log(`Storing ${sources.length} source embeddings for topic "${topic}"...`);
+
+        // Transform to embedding input format
+        const embeddingInputs = sources.map((s: { id: string; type: string; title: string; url: string; summary: string; metadata?: Record<string, unknown> }) => ({
+            source_id: s.id,
+            source_type: s.type as 'article' | 'video',
+            topic: topic,
+            title: s.title,
+            url: s.url,
+            summary: s.summary,
+            metadata: s.metadata || {}
+        }));
+
+        const result = await storeSourceEmbeddings(embeddingInputs);
+
+        res.json({
+            success: true,
+            ...result
+        });
+
+    } catch (e) {
+        console.error("Embeddings Store Error:", e);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        res.status(500).json({ error: (e as any).message });
+    }
+});
+
+// --- EMBEDDINGS: SEARCH ---
+app.post('/v2/embeddings/search', async (req, res) => {
+    try {
+        const { query, topic, limit, minSimilarity } = req.body;
+
+        if (!query) {
+            return res.status(400).json({ error: "Query is required" });
+        }
+
+        console.log(`Semantic search for: "${query.slice(0, 50)}..."`);
+
+        const results = await semanticSearch(query, {
+            limit: limit || 10,
+            topic,
+            minSimilarity: minSimilarity || 0.5
+        });
+
+        res.json({
+            results,
+            count: results.length
+        });
+
+    } catch (e) {
+        console.error("Embeddings Search Error:", e);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        res.status(500).json({ error: (e as any).message });
+    }
+});
+
+// --- EMBEDDINGS: CHECK SIMILAR ---
+app.post('/v2/embeddings/check-similar', async (req, res) => {
+    try {
+        const { topic, summary, limit } = req.body;
+
+        if (!topic || !summary) {
+            return res.status(400).json({ error: "Topic and summary are required" });
+        }
+
+        console.log(`Checking for similar past research on: "${topic}"`);
+
+        const result = await findSimilarResearch(topic, summary, limit || 5);
+
+        res.json(result);
+
+    } catch (e) {
+        console.error("Embeddings Check Similar Error:", e);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        res.status(500).json({ error: (e as any).message });
+    }
+});
+
+// --- EMBEDDINGS: HISTORY ---
+app.get('/v2/embeddings/history/:topic', async (req, res) => {
+    try {
+        const { topic } = req.params;
+
+        if (!topic) {
+            return res.status(400).json({ error: "Topic is required" });
+        }
+
+        console.log(`Fetching research history for: "${topic}"`);
+
+        const history = await getResearchHistory(topic);
+
+        res.json({
+            topic,
+            count: history.length,
+            sources: history
+        });
+
+    } catch (e) {
+        console.error("Embeddings History Error:", e);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         res.status(500).json({ error: (e as any).message });
     }
