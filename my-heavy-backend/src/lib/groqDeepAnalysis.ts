@@ -11,7 +11,7 @@
  * + Citation Verification
  */
 
-import { callGroqWithFallback, MODEL_CHAINS } from './groq';
+import { callLLM } from './llmProvider';
 import { CanonicalSource } from './groqNormalize';
 
 // ============ OUTPUT INTERFACES ============
@@ -127,12 +127,12 @@ Extract 5-10 key factual claims from these sources.
 </schema>`;
 
     try {
-        const response = await callGroqWithFallback({
+        const response = await callLLM({
+            task: 'DEEP_ANALYSIS',
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
             ],
-            modelChain: MODEL_CHAINS.SUMMARIZE,
             temperature: 0.2,
             jsonMode: true
         });
@@ -209,12 +209,12 @@ Provide comprehensive geopolitical analysis.
 </example>`;
 
     try {
-        const response = await callGroqWithFallback({
+        const response = await callLLM({
+            task: 'DEEP_ANALYSIS',
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
             ],
-            modelChain: MODEL_CHAINS.CLASSIFY,
             temperature: 0.3,
             jsonMode: true
         });
@@ -281,12 +281,12 @@ Provide an Islamic ethical perspective on this situation.
 </schema>`;
 
     try {
-        const response = await callGroqWithFallback({
+        const response = await callLLM({
+            task: 'DEEP_ANALYSIS',
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
             ],
-            modelChain: MODEL_CHAINS.CLASSIFY,
             temperature: 0.4,
             jsonMode: true
         });
@@ -357,12 +357,12 @@ Generate risk assessment and predictions.
 </example>`;
 
     try {
-        const response = await callGroqWithFallback({
+        const response = await callLLM({
+            task: 'DEEP_ANALYSIS',
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
             ],
-            modelChain: MODEL_CHAINS.CLASSIFY,
             temperature: 0.4,
             jsonMode: true
         });
@@ -432,12 +432,12 @@ Generate recommendations and humanitarian impact assessment.
 </example>`;
 
     try {
-        const response = await callGroqWithFallback({
+        const response = await callLLM({
+            task: 'DEEP_ANALYSIS',
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
             ],
-            modelChain: MODEL_CHAINS.CLASSIFY,
             temperature: 0.3,
             jsonMode: true
         });

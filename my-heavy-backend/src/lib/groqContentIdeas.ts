@@ -4,7 +4,7 @@
  * Target audience: Teen to pre-adult (15-25)
  */
 
-import { callGroqWithFallback, MODEL_CHAINS } from './groq';
+import { callLLM } from './llmProvider';
 import { DeepAnalysis } from './groqDeepAnalysis';
 
 // ============ OUTPUT INTERFACES ============
@@ -98,12 +98,12 @@ Generate 3-4 Instagram Reel ideas.
 </example>`;
 
     try {
-        const response = await callGroqWithFallback({
+        const response = await callLLM({
+            task: 'CONTENT_IDEAS',
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
             ],
-            modelChain: MODEL_CHAINS.SUMMARIZE,
             temperature: 0.6,
             jsonMode: true
         });
@@ -190,12 +190,12 @@ Generate 2-3 Instagram Carousel ideas (swipe-through educational format).
 </example>`;
 
     try {
-        const response = await callGroqWithFallback({
+        const response = await callLLM({
+            task: 'CONTENT_IDEAS',
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
             ],
-            modelChain: MODEL_CHAINS.SUMMARIZE,
             temperature: 0.6,
             jsonMode: true
         });
@@ -258,9 +258,9 @@ OUTPUT: JSON array matching content idea structure.
 Platform should be "twitter_thread".`;
 
     try {
-        const response = await callGroqWithFallback({
+        const response = await callLLM({
+            task: 'CONTENT_IDEAS',
             messages: [{ role: "user", content: prompt }],
-            modelChain: MODEL_CHAINS.SUMMARIZE,
             temperature: 0.6,
             jsonMode: true
         });
