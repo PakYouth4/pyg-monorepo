@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #000000;
+  --foreground: #ffffff;
+  --primary: #ff0000;
+  /* Pure Red */
+  --alert: #ff0000;
+  /* Pure Red */
+  --border: #333333;
+  /* Subtle Border */
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: var(--foreground);
+  background-color: var(--background);
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Minimalist Utilities */
+.btn-primary {
+  background-color: var(--primary);
+  color: black;
+  font-weight: bold;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: opacity 0.2s;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-outline {
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: border-color 0.2s;
+}
+
+.btn-outline:hover {
+  border-color: var(--foreground);
+}

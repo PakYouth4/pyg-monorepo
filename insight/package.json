@@ -1,0 +1,39 @@
+{
+  "name": "research-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@distube/ytdl-core": "^4.16.12",
+    "@google/generative-ai": "^0.24.1",
+    "@sentry/nextjs": "^10.28.0",
+    "axios": "^1.13.2",
+    "cheerio": "^1.1.2",
+    "firebase": "^12.6.0",
+    "framer-motion": "^12.23.24",
+    "lucide-react": "^0.555.0",
+    "next": "14.2.33",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "rss-parser": "^3.13.0",
+    "vercel": "^48.12.1",
+    "youtube-transcript": "^1.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.33",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: heavy-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: FIRECRAWL_API_KEY
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+    healthCheckPath: /

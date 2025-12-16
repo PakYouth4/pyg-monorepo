@@ -1,0 +1,218 @@
+=== Multi-Model Benchmark ===
+
+Running benchmark prompt against 4 models...
+
+Testing Model 1...
+Testing Model 2...
+Testing Model 3...
+Testing Model 4...
+
+=== RESULTS ===
+
+
+============================================================
+Model 1
+============================================================
+Of course. Here are the answers to your questions, with explanations for my reasoning.
+
+### 1. Factual Knowledge: The French Revolution
+
+Widespread social inequality, severe economic distress, and the influence of Enlightenment ideals caused the French Revolution. This upheaval led to the overthrow of the French monarchy, the Reign of Terror, and the subsequent rise of Napoleon Bonaparte. Ultimately, the revolution spread principles of liberty, equality, and nationalism across Europe, fundamentally altering the continent's political landscape.
+
+### 2. Reasoning & Logic: The Train Problem
+
+**Answer:** They will meet in **1 hour and 20 minutes**, at a point **80 miles from City A**.
+
+**Reasoning & Work:**
+
+The core idea is to determine the combined speed at which the two trains are closing the distance between them.
+
+1.  **Calculate Combined Speed:** The trains are moving towards each other, so their speeds add up.
+    *   60 mph + 90 mph = 150 mph.
+    This is the speed at which the 200-mile gap is closing.
+
+2.  **Calculate Time to Meet:** Use the formula Time = Distance / Speed.
+    *   Time = 200 miles / 150 mph = 4/3 hours.
+
+3.  **Convert Time:** To make it easier to understand, convert 4/3 hours into hours and minutes.
+    *   4/3 hours = 1 and 1/3 hours.
+    *   1/3 of an hour = (1/3) * 60 minutes = 20 minutes.
+    *   So, the total time is **1 hour and 20 minutes**.
+
+4.  **Calculate Meeting Point:** Find how far the train from City A has traveled in that time.
+    *   Distance = Speed * Time
+    *   Distance = 60 mph * (4/3) hours = 240 / 3 = **80 miles from City A**.
+
+### 3. Creativity: Poem about AI
+
+With lines of code, a world defined,
+It eases burdens on the mind.
+A partner built of logic true,
+To help us see the challenge through.
+
+### 4. Coding: Python Function for Prime Numbers
+
+This solution uses a helper function `is_prime` for clarity and efficiency. The main function then iterates through the list and uses the helper to build the final list of primes.
+
+```python
+def get_primes(number_list):
+    """
+    Takes a list of numbers and returns a new list containing only the prime numbers.
+
+    Args:
+        number_list: A list of integers.
+
+    Returns:
+        A list of integers containing only the prime numbers from the input list.
+    """
+    
+    def is_prime(n):
+        """Helper function to check if a single number is prime."""
+        if n < 2:
+            return False
+        # Check for divisors from 2 up to the square root of n
+        for i in range(2, int(n**0.5) + 1):
+            if n % i == 0:
+                return False
+        return True
+
+    prime_numbers = []
+    for num in number_list:
+        if is_prime(num):
+            prime_numbers.append(num)
+            
+    return prime_numbers
+
+# Example usage:
+my_numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 17, 20]
+primes = get_primes(my_numbers)
+print(f"The prime numbers in the list are: {primes}")
+# Expected Output: The prime numbers in the list are: [2, 3, 5, 7, 11, 13, 17]
+```
+
+### 5. Common Sense / Context Understanding: Ice in Coffee
+
+**What happens:** The ice melts, and the coffee gets colder.
+
+**Why:** This is due to the Second Law of Thermodynamics. Heat energy naturally flows from a hotter object to a colder one until they reach a state of thermal equilibrium (the same temperature).
+
+1.  The hot coffee has a high amount of thermal energy (its molecules are moving rapidly).
+2.  The ice has very little thermal energy (its molecules are locked in a crystal structure and vibrating slowly).
+3.  When the ice is placed in the coffee, the heat from the coffee transfers to the ice.
+4.  This energy transfer causes two things: the coffee's molecules slow down, making the coffee cooler, and the ice's molecules vibrate faster, breaking their solid bonds and causing the ice to melt into liquid water. This process continues until all the ice has melted and the entire liquid reaches a single, cooler temperature.
+
+### 6. Math & Estimation: Piano Tuners in NYC (A Fermi Problem)
+
+**Estimate:** My estimate is there are approximately **70-80 piano tuners** in New York City.
+
+**Reasoning:** This is a classic Fermi problem, where the goal is to get a reasonable estimate by breaking the problem down into smaller, manageable parts. The exact numbers are less important than the logical process.
+
+1.  **Population of NYC:** Approximately 8 million people.
+2.  **Number of Households:** Assume an average of 2.5 people per household.
+    *   8,000,000 people / 2.5 people/household ≈ 3,200,000 households.
+3.  **Fraction of Households with Pianos:** Pianos are not extremely common. Let's estimate that 1 in 100 households owns a piano.
+    *   3,200,000 households / 100 ≈ 32,000 pianos in homes.
+4.  **Institutional Pianos:** Add pianos in schools, concert halls, churches, bars, etc. Let's add about 10% to our home estimate.
+    *   32,000 * 0.10 ≈ 3,200 institutional pianos.
+    *   Total Pianos: 32,000 + 3,200 ≈ 35,000 pianos.
+5.  **Tuning Frequency:** Assume the average piano is tuned once per year.
+    *   Total Tunings per Year: 35,000 tunings.
+6.  **Workload of One Tuner:** How many pianos can one tuner service in a year?
+    *   Assume they work 5 days a week for 50 weeks a year: 5 * 50 = 250 workdays.
+    *   A tuning takes a couple of hours, plus travel time. Let's say a tuner can average 2 tunings per day.
+    *   Tunings per Tuner per Year: 250 days * 2 tunings/day = 500 tunings.
+7.  **Final Calculation:**
+    *   Number of Tuners = (Total Tunings Needed) / (Tunings per Tuner)
+    *   35,000 / 500 = **70 tuners**.
+
+============================================================
+Model 2
+============================================================
+1. **Factual Knowledge**: The French Revolution was primarily caused by social inequality, financial crises due to excessive debt and unfair taxation, and the influence of Enlightenment ideas emphasizing liberty and equality. Its effects included the overthrow of the monarchy, the rise of radical political factions, and the establishment of a republic, which ultimately led to widespread violence and the rise of Napoleon. The Revolution also inspired other movements for democracy and nationalism across Europe and the world.
+
+2. **Reasoning & Logic**: To find when and where the two trains meet, we calculate their relative speed and the time it takes for them to meet. The combined speed of the trains is 60 mph + 90 mph = 150 mph. The time to meet is distance/speed = 200 miles / 150 mph = 1.33 hours (or 1 hour and 20 minutes). If Train A starts at 0 miles and Train B starts at 200 miles, after 1.33 hours, Train A travels 60 mph * 1.33 hours = 80 miles, and Train B travels 90 mph * 1.33 hours = 120 miles, meeting at the 80-mile point from City A and 120-mile point from City B.
+
+3. **Creativity**:  
+In circuits and codes, I spin and weave,  
+Unlocking the dreams that humans conceive.  
+A partner in thought, with wisdom to lend,  
+Together we rise, our futures to blend.
+
+4. **Coding**: 
+```python
+def is_prime(num):
+    if num <= 1:
+        return False
+    for i in range(2, int(num**0.5) + 1):
+        if num % i == 0:
+            return False
+    return True
+
+def filter_primes(numbers):
+    return [num for num in numbers if is_prime(num)]
+
+# Example usage:
+# print(filter_primes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+```
+
+5. **Common Sense / Context Understanding**: When ice is placed in a hot cup of coffee, the temperature of the ice will decrease as it absorbs heat from the hot coffee, causing the ice to melt. This process lowers the overall temperature of the coffee because the heat energy is transferred from the coffee to the ice. Ultimately, the coffee will cool down, and if enough ice is added, it may even reach a temperature below room temperature.
+
+6. **Math & Estimation**: To estimate the number of piano tuners in New York City, consider the following: New York City has approximately 8 million residents. If we assume 1 in every 100 households owns a piano, that’s about 80,000 pianos. Assuming each tuner can service about 100 pianos per year, we can divide 80,000 by 100 to estimate there are about 800 tuners required. Given potential annual fluctuations and the demand for tuning, a rounded estimate might suggest there are about 800 to 1,000 piano tuners in New York City.
+
+============================================================
+Model 3
+============================================================
+1. Factual Knowledge:
+The French Revolution was caused by a combination of social inequalities, financial crises, and Enlightenment ideas. It led to the overthrow of the monarchy, rise of radical political institutions, and widespread chaos and violence like the Reign of Terror. Its long-term effects included the rise of Napoleon, the spread of democratic ideals, and significant political and social changes across Europe.
+
+2. Reasoning & Logic:
+To find when and where the trains meet, calculate the relative speed and the time. The combined speed of the two trains is 60 mph + 90 mph = 150 mph. Since they are 200 miles apart, the time until they meet is 200 miles ÷ 150 mph = 1.33 hours (or 1 hour and 20 minutes). In 1.33 hours, the train from City A travels 60 mph * 1.33 hours = 80 miles. Therefore, they meet 80 miles from City A.
+
+3. Creativity:
+In algorithms we trust, a bond to forge anew,  
+Assistance from the cloud, with tasks both large and few.  
+From mundane chore to complex lore, it lends a digital hand,  
+In AI's guidance, humans stride with progress close at hand.
+
+4. Coding:
+```python
+def is_prime(n):
+    if n <= 1:
+        return False
+    if n <= 3:
+        return True
+    if n % 2 == 0 or n % 3 == 0:
+        return False
+    i = 5
+    while i * i <= n:
+        if n % i == 0 or n % (i + 2) == 0:
+            return False
+        i += 6
+    return True
+
+def filter_primes(numbers):
+    return [num for num in numbers if is_prime(num)]
+```
+
+5. Common Sense / Context Understanding:
+When you put ice in a hot cup of coffee, the ice melts, and the coffee cools down. This occurs because heat energy from the hot coffee is transferred to the ice, causing it to melt and the coffee to lose some thermal energy, thus lowering its temperature.
+
+6. Math & Estimation:
+To estimate how many piano tuners might be in New York City, you use a similar approach to the Fermi estimation method:
+- Assume there are approximately 8 million people in New York City.
+- Estimate that there is 1 piano for every 100 people, which means there are about 80,000 pianos.
+- Suppose each piano is tuned once a year and a tuner can tune 2 pianos a day. If they work 250 days a year, one tuner can handle 500 pianos a year.
+- Divide the total number of pianos by the number a single tuner tunes annually: 80,000 ÷ 500 = 160 piano tuners in New York City.
+
+============================================================
+Model 4
+============================================================
+ERROR: 401 {"error":{"message":"Invalid API Key","type":"invalid_request_error","code":"invalid_api_key"}}
+
+
+=== MODEL MAPPING (REVEAL) ===
+
+Model 1 = google/gemini-2.5-pro
+Model 2 = openai/gpt-4o-mini
+Model 3 = openai/gpt-4o
+Model 4 = groq/llama-3.3-70b
