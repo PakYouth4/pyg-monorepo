@@ -339,16 +339,22 @@ Generate risk assessment and predictions.
 - Base predictions on current trajectory and actor motivations
 </requirements>
 
-<schema>
+<avoid>
+- Don't make predictions without factual basis
+- Don't assign equal probability to all scenarios
+- Don't ignore low-probability high-impact risks
+</avoid>
+
+<example>
 {
   "risks": [
-    {"risk": "string", "likelihood": "low|medium|high", "impact": "low|medium|high", "mitigation": "string"}
+    {"risk": "Escalation to regional conflict", "likelihood": "medium", "impact": "high", "mitigation": "International diplomatic intervention"}
   ],
   "predictions": [
-    {"scenario": "string", "timeframe": "string", "probability": "unlikely|possible|likely", "basis": "string"}
+    {"scenario": "Ceasefire within 3 months", "timeframe": "1-3 months", "probability": "possible", "basis": "International pressure mounting"}
   ]
 }
-</schema>`;
+</example>`;
 
     try {
         const response = await callGroqWithFallback({
@@ -405,18 +411,25 @@ Generate recommendations and humanitarian impact assessment.
 - Media/Journalists
 </target_audiences>
 
-<schema>
+<avoid>
+- Don't give vague recommendations like "stay informed"
+- Don't ignore practical constraints
+- Don't recommend illegal or unethical actions
+</avoid>
+
+<example>
 {
   "recommendations": [
-    {"action": "specific action", "target_audience": "who", "priority": "low|medium|high"}
+    {"action": "Contact local representatives to support humanitarian aid legislation", "target_audience": "Community members", "priority": "high"},
+    {"action": "Verify sources before sharing conflict imagery on social media", "target_audience": "Media/Journalists", "priority": "medium"}
   ],
   "humanitarian": {
-    "affected_populations": ["string"],
-    "immediate_needs": ["string"],
-    "long_term_concerns": ["string"]
+    "affected_populations": ["Displaced civilians", "Children and elderly"],
+    "immediate_needs": ["Medical supplies", "Clean water", "Shelter"],
+    "long_term_concerns": ["Psychological trauma", "Economic recovery", "Infrastructure rebuilding"]
   }
 }
-</schema>`;
+</example>`;
 
     try {
         const response = await callGroqWithFallback({

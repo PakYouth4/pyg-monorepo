@@ -139,36 +139,62 @@ async function generateCarouselIdeas(
     const predictions = analysis.predictions.slice(0, 3)
         .map(p => `${p.scenario} (${p.probability})`).join('\n- ');
     const riskItems = analysis.risk_matrix.slice(0, 3)
-        .map(r => `${r.risk} - ${r.likelihood} likelihood`).join('\n- ');
+        .map(r => `${r.risk} - ${r.likelihood}`).join('\n- ');
 
-    const prompt = `
-TOPIC: "${topic}"
+    const systemPrompt = `You are an educational content designer for Instagram. Create informative carousel posts that break down complex topics into digestible slides. Output ONLY valid JSON arrays.`;
 
-KEY INSIGHTS:
-${analysis.geopolitical_analysis.summary}
+    const userPrompt = `<topic>${topic}</topic>
 
-PREDICTIONS:
+<insights>
+${analysis.geopolitical_analysis.summary?.substring(0, 500) || 'No summary available'}
+</insights>
+
+<predictions>
 - ${predictions}
+</predictions>
 
-RISKS:
-- ${riskItems}
+<audience>Youth (15-25), visual learners, Instagram users</audience>
 
-AUDIENCE: Youth (15-25 years), prefer visual learning, scroll through Instagram/LinkedIn
+<task>
+Generate 2-3 Instagram Carousel ideas (swipe-through educational format).
+</task>
 
-TASK: Generate 2-3 Instagram Carousel ideas (educational, swipe-through format).
+<requirements>
+- hook: First slide that stops scrolling
+- script: Describe 5-8 slides content
+- End with call to action
+- Educational and shareable
+</requirements>
 
-Each carousel should:
-- Have a hook that makes people stop scrolling
-- Be 5-8 slides worth of content (summarize what each slide covers)
-- End with a strong call to action
-- Be shareable and educational
+<avoid>
+- Don't make slides too text-heavy
+- Don't use jargon without explanation
+- Don't create more than 8 slides per carousel
+</avoid>
 
-OUTPUT: JSON array matching the content idea structure.
-Include: id, platform (set to "carousel"), hook, script (describe slide content), key_message, visual_style, sensitivity_level, ethical_notes, source_reference, priority, call_to_action, hashtags.`;
+<example>
+[{
+  "id": "carousel_1",
+  "platform": "carousel",
+  "hook": "5 things you need to know about X",
+  "script": "Slide 1: Hook question. Slide 2: Key fact #1. Slide 3: Key fact #2. Slide 4: Why this matters. Slide 5: What you can do. Slide 6: CTA to share.",
+  "key_message": "Understanding the basics of the conflict",
+  "visual_style": "Clean infographic style with icons",
+  "sensitivity_level": "standard",
+  "ethical_notes": [],
+  "source_reference": "Based on key facts from analysis",
+  "priority": 2,
+  "call_to_action": "Save this and share with friends",
+  "hashtags": ["#education", "#awareness", "#infographic"]
+}]
+</example>`;
 
     try {
         const response = await callGroqWithFallback({
-            messages: [{ role: "user", content: prompt }],
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
             modelChain: MODEL_CHAINS.SUMMARIZE,
             temperature: 0.6,
             jsonMode: true
