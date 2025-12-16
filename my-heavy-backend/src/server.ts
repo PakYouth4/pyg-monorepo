@@ -17,6 +17,7 @@ import { processVideosInParallel } from './lib/groqTranscribe';
 import { verifyVideosGroq } from './lib/groqVerify';
 import { classifyVideosGroq, filterKeptVideos } from './lib/groqClassify';
 import { mergeKnowledgeBase, enrichSourcesWithGroq } from './lib/knowledgeBase';
+import { normalizeSources } from './lib/groqNormalize';
 
 dotenv.config();
 
@@ -28,7 +29,7 @@ const PORT = process.env.PORT || 7860; // Hugging Face Spaces default port
 
 // --- HEALTH CHECK ---
 app.get('/', (req, res) => {
-    res.send('Heavy Backend V3.4 (Model Fallback) Online 🚀');
+    res.send('Heavy Backend V3.5 (Source Normalization) Online 🚀');
 });
 
 // ... (omitted)
@@ -146,6 +147,34 @@ app.post('/v2/step9-merge', async (req, res) => {
 
     } catch (e) {
         console.error("V2 Step 9 Merge Error:", e);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        res.status(500).json({ error: (e as any).message });
+    }
+});
+
+// --- V2: STEP 10 (NORMALIZE SOURCES) ---
+app.post('/v2/step10-normalize', async (req, res) => {
+    try {
+        const { topic, articles, videos } = req.body;
+
+        if (!topic) {
+            return res.status(400).json({ error: "Topic is required" });
+        }
+
+        if (!articles && !videos) {
+            return res.status(400).json({ error: "At least one of articles or videos is required" });
+        }
+
+        console.log(`Normalizing sources: ${articles?.length || 0} articles, ${videos?.length || 0} videos`);
+
+        const result = await normalizeSources(articles || [], videos || [], topic);
+
+        console.log(`Normalization Complete. Total sources: ${result.sources.length}`);
+
+        res.json(result);
+
+    } catch (e) {
+        console.error("V2 Step 10 Normalize Error:", e);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         res.status(500).json({ error: (e as any).message });
     }
