@@ -21,6 +21,7 @@ import { normalizeSources } from './lib/groqNormalize';
 import { storeSourceEmbeddings, semanticSearch, findSimilarResearch, getResearchHistory } from './lib/embeddings';
 import { runDeepAnalysis } from './lib/groqDeepAnalysis';
 import { generateContentIdeas } from './lib/groqContentIdeas';
+import { assembleReport } from './lib/reportAssembler';
 
 dotenv.config();
 
@@ -32,7 +33,7 @@ const PORT = process.env.PORT || 7860; // Hugging Face Spaces default port
 
 // --- HEALTH CHECK ---
 app.get('/', (req, res) => {
-    res.send('Heavy Backend V3.8 (Content Ideas) Online 🚀');
+    res.send('Heavy Backend V3.9 (Final Report) Online 🚀');
 });
 
 // ... (omitted)
@@ -226,6 +227,38 @@ app.post('/v2/step12-content', async (req, res) => {
 
     } catch (e) {
         console.error("V2 Step 12 Content Error:", e);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        res.status(500).json({ error: (e as any).message });
+    }
+});
+
+// --- V2: STEP 13 (ASSEMBLE FINAL REPORT) ---
+app.post('/v2/step13-report', async (req, res) => {
+    try {
+        const { topic, sources, deep_analysis, content_ideas, executive_summary } = req.body;
+
+        if (!topic || !sources || !deep_analysis || !content_ideas) {
+            return res.status(400).json({
+                error: "Required: topic, sources, deep_analysis, content_ideas"
+            });
+        }
+
+        console.log(`Assembling final report for "${topic}"...`);
+
+        const report = assembleReport({
+            topic,
+            executive_summary,
+            sources,
+            deep_analysis,
+            content_ideas
+        });
+
+        console.log(`Report assembled. ID: ${report.report_id}, Grade: ${report.quality_check.grade}`);
+
+        res.json(report);
+
+    } catch (e) {
+        console.error("V2 Step 13 Report Error:", e);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         res.status(500).json({ error: (e as any).message });
     }
