@@ -17,50 +17,48 @@ export interface StructuredArticle {
 
 export async function structureArticleGroq(markdown: string, url: string, index: number): Promise<StructuredArticle> {
 
-    const prompt = `
-        You are an elite Data Structuring Agent.
-        
-        TASK: Convert the following Markdown Article into a Strict JSON Object.
-        
-        INPUT METADATA:
-        - Index ID: ${index}
-        - URL: ${url}
-        
-        INPUT TEXT (MARKDOWN):
-        """
-        ${markdown.substring(0, 25000)} 
-        """
-        (Truncated to fit context window)
+    const systemPrompt = `You are a news article parser. Extract structured data from raw article content. Output ONLY valid JSON matching the exact schema provided.`;
 
-        INSTRUCTIONS:
-        1. "publisher": Extract the news organization name (e.g., "BBC", "Reuters", "UN News").
-        2. "sections": Divide the entire body text into logical sections based on the markdown headings or natural thematic breaks.
-           - "heading": The section title (or "Introduction" for the first part).
-           - "content": The full text of that section.
-        3. IGNORE navigation menus, "Read more" links, ads, and footers. Only keep the core article text.
-        4. "id": Use the provided Index ID (${index}).
-        5. "url": Use the provided URL.
+    const userPrompt = `<metadata>
+ID: ${index}
+URL: ${url}
+</metadata>
 
-        CRITICAL: OUTPUT REQUEST
-        - Return ONLY raw JSON. 
-        - Do NOT include any markdown formatting like \`\`\`json or \`\`\`.
-        - Ensure the output is a valid JSON object matching this structure:
-        {
-            "id": number,
-            "url": "string",
-            "publisher": "string",
-            "sections": [ { "heading": "string", "content": "string" } ]
-        }
-    `;
+<article>
+${markdown.substring(0, 20000)}
+</article>
+
+<task>
+Parse this article and extract structured sections.
+</task>
+
+<requirements>
+- Extract publisher name from content/URL (e.g., "BBC", "Al Jazeera", "Reuters")
+- Split content into logical sections based on headings or themes
+- First section should be "Introduction" or main headline content
+- EXCLUDE: navigation, ads, "Read more" links, footers
+- KEEP: All substantive article text
+</requirements>
+
+<schema>
+{
+  "id": ${index},
+  "url": "${url}",
+  "publisher": "string",
+  "sections": [
+    {"heading": "string", "content": "string"}
+  ]
+}
+</schema>`;
 
     try {
         const text = await callGroqWithFallback({
             messages: [
-                { role: "system", content: "You are a JSON-only API. Output strict JSON." },
-                { role: "user", content: prompt }
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
             ],
-            modelChain: MODEL_CHAINS.SUMMARIZE, // Medium complexity
-            temperature: 0,
+            modelChain: MODEL_CHAINS.SUMMARIZE,
+            temperature: 0.1,
             jsonMode: true
         });
 

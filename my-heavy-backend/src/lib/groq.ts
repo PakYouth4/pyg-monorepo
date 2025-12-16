@@ -97,23 +97,39 @@ export async function callGroqWithFallback(options: GroqCallOptions): Promise<st
 
 // ============ KEYWORD GENERATION (WITH FALLBACK) ============
 export async function generateMetaKeywordsV2(topic: string): Promise<string[]> {
-    const prompt = `
-    TOPIC: "${topic}"
-    
-    TASK: Generate 10 high-quality, specific SEO/Meta keywords or short phrases related to this topic for an OSINT research report.
-    - Mix of broad terms (e.g., "Sudan Conflict") and specific entities (e.g., "RSF", "El Fasher").
-    - Focus on finding NEWS and VIDEO footage.
-    - OUTPUT MUST BE A PURE JSON ARRAY OF STRINGS.
-    - NO EXPLANATION. NO MARKDOWN. JUST THE ARRAY.
-    
-    Example Output: ["Sudan Civil War", "RSF", "SAF", "Khartoum Battle", "humanitarian crisis", "Al-Burhan", "Hemedti", "Darfur genocide", "Port Sudan", "refugee crisis"]
-    `;
+    const systemPrompt = `You are an OSINT research keyword specialist. You generate precise, searchable terms for finding news articles and video coverage about geopolitical topics. Output ONLY valid JSON arrays.`;
+
+    const userPrompt = `<topic>${topic}</topic>
+
+<task>
+Generate exactly 10 search keywords/phrases for finding news and video coverage about this topic.
+</task>
+
+<requirements>
+- Include 3-4 broad terms (e.g., "Gaza conflict", "Palestine crisis")
+- Include 3-4 specific entities (names, organizations, locations)
+- Include 2-3 event-specific terms (e.g., "hospital strike", "ceasefire talks")
+- Each keyword: 1-4 words, searchable on Google/YouTube
+- Prioritize terms likely to find RECENT news coverage
+</requirements>
+
+<format>
+Output a JSON array of 10 strings. Nothing else.
+</format>
+
+<example>
+Input topic: "Sudan Civil War 2024"
+Output: ["Sudan civil war", "RSF Rapid Support Forces", "SAF Sudan Army", "Khartoum fighting", "Darfur crisis", "Al-Burhan", "Hemedti", "Sudan humanitarian crisis", "Port Sudan refugees", "Sudan ceasefire"]
+</example>`;
 
     try {
         const content = await callGroqWithFallback({
-            messages: [{ role: "user", content: prompt }],
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
             modelChain: MODEL_CHAINS.KEYWORDS,
-            temperature: 0.5,
+            temperature: 0.4,
             jsonMode: true
         });
 

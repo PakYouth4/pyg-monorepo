@@ -29,25 +29,30 @@ export async function summarizeArticleGroq(article: any): Promise<SummarizedArti
     const chunks = chunkText(fullText);
     const chunkSummaries: string[] = [];
 
-    // 2. Summarize Chunks (Parallel) - Use SUMMARIZE chain (fast first)
+    // 2. Summarize Chunks (Parallel)
+    const chunkSystemPrompt = `You are a news summarizer. Extract key facts as bullet points. Be concise and factual.`;
+
     const promises = chunks.map(async (chunk, i) => {
         try {
-            const prompt = `
-                TASK: Summarize this text chunk into distinct, information-dense bullet points.
-                - Focus on KEY FACTS, FIGURES, DATES, and NAMES.
-                - Ignore boilerplate.
-                - Output ONLY a bulleted list (Markdown "- ...").
-                
-                TEXT CHUNK (${i + 1}/${chunks.length}):
-                """
-                ${chunk}
-                """
-            `;
+            const chunkPrompt = `<chunk index="${i + 1}" total="${chunks.length}">
+${chunk}
+</chunk>
+
+<task>Extract 3-5 key facts from this text chunk as bullet points.</task>
+
+<requirements>
+- Focus on: dates, numbers, names, events, quotes
+- Ignore: boilerplate, navigation, repetition
+- Format: Markdown bullets (- fact)
+</requirements>`;
 
             const result = await callGroqWithFallback({
-                messages: [{ role: "user", content: prompt }],
+                messages: [
+                    { role: "system", content: chunkSystemPrompt },
+                    { role: "user", content: chunkPrompt }
+                ],
                 modelChain: MODEL_CHAINS.SUMMARIZE,
-                temperature: 0.3
+                temperature: 0.2
             });
 
             return result;
@@ -60,36 +65,36 @@ export async function summarizeArticleGroq(article: any): Promise<SummarizedArti
     const results = await Promise.all(promises);
     const allBullets = results.join("\n");
 
-    // 3. Final Merge & Headline (Use heavier model for synthesis)
-    const finalPrompt = `
-        TASK: Synthesize these bullet points into a Final Summary and a One-Sentence Headline.
-        
-        INPUT BULLETS:
-        """
-        ${allBullets.substring(0, 30000)}
-        """
+    // 3. Final Merge & Headline
+    const mergeSystemPrompt = `You are a news editor. Synthesize bullet points into a cohesive summary. Output ONLY valid JSON.`;
 
-        OUTPUT FORMAT (Strict JSON):
-        {
-            "headline_summary": "A single, powerful sentence summarizing the core event.",
-            "summary_bullets": [
-                "Detailed bullet point 1 (rich with facts)",
-                "Detailed bullet point 2",
-                "...",
-                "Detailed bullet point 7"
-            ]
-        }
-        - Aim for 5-10 high-quality bullets.
-        - Deduplicate information.
-    `;
+    const mergePrompt = `<bullets>
+${allBullets.substring(0, 25000)}
+</bullets>
+
+<task>Create a headline and 5-10 summary bullet points from these notes.</task>
+
+<requirements>
+- headline_summary: One powerful sentence capturing the core story
+- summary_bullets: 5-10 distinct, fact-rich bullet points
+- Deduplicate overlapping information
+- Prioritize most newsworthy facts
+</requirements>
+
+<schema>
+{
+  "headline_summary": "string",
+  "summary_bullets": ["string", "string", ...]
+}
+</schema>`;
 
     try {
         const text = await callGroqWithFallback({
             messages: [
-                { role: "system", content: "You are a JSON-only API." },
-                { role: "user", content: finalPrompt }
+                { role: "system", content: mergeSystemPrompt },
+                { role: "user", content: mergePrompt }
             ],
-            modelChain: MODEL_CHAINS.CLASSIFY, // Use heavier model for final merge
+            modelChain: MODEL_CHAINS.CLASSIFY,
             temperature: 0.2,
             jsonMode: true
         });

@@ -48,52 +48,55 @@ async function generateReelIdeas(
     const keyActors = analysis.geopolitical_analysis.key_actors.slice(0, 3)
         .map(a => `${a.name}: ${a.role}`).join('\n- ');
 
-    const prompt = `
-TOPIC: "${topic}"
+    const systemPrompt = `You are a viral content strategist for youth activism. Create engaging, educational content for Instagram/TikTok. Be punchy, authentic, and impactful. Output ONLY valid JSON arrays.`;
 
-KEY FACTS:
+    const userPrompt = `<topic>${topic}</topic>
+
+<facts>
 - ${keyFacts}
+</facts>
 
-KEY ACTORS:
+<actors>
 - ${keyActors}
+</actors>
 
-AUDIENCE: Youth (15-25 years), engaged with global issues, use Instagram/TikTok
+<audience>Youth (15-25), socially conscious, Instagram/TikTok users</audience>
 
-TASK: Generate 3-4 Instagram Reel/TikTok ideas for this topic.
+<task>
+Generate 3-4 Instagram Reel ideas.
+</task>
 
-For each idea:
-- hook: Attention-grabbing opening (MAX 10 words, like "POV:", "Wait...", "They don't want you to know...")
-- script: 15-30 second spoken script (conversational, punchy, no jargon)
-- key_message: One sentence main takeaway
-- visual_style: Brief description (e.g., "text overlay on news footage", "split screen comparison")
-- sensitivity_level: "standard", "cautious" (if involves casualties/violence), or "sensitive" (religious content)
-- ethical_notes: Array of things to be careful about (1-2 items)
-- source_reference: Which fact this is based on
-- priority: 1-5 (1 = most viral potential)
-- call_to_action: What you want viewer to do
-- hashtags: 5-7 relevant hashtags
+<requirements>
+- hook: MAX 10 words ("POV:", "Wait...", "Nobody's talking about...")
+- script: 15-30 second spoken script (conversational, punchy)
+- sensitivity_level: "standard" | "cautious" (violence) | "sensitive" (religious)
+- Include ethical_notes for cautious/sensitive content
+- Base each idea on a specific fact
+</requirements>
 
-OUTPUT: JSON array of content ideas.
-
-Example:
+<schema>
 [{
   "id": "reel_1",
   "platform": "instagram_reel",
-  "hook": "This is what they didn't show you",
-  "script": "Everyone's talking about... but nobody's mentioning... Here's what's actually happening...",
-  "key_message": "The media narrative is missing key context",
-  "visual_style": "News footage montage with text overlays",
-  "sensitivity_level": "cautious",
-  "ethical_notes": ["Verify footage authenticity", "Credit sources"],
-  "source_reference": "100 casualties reported in conflict",
-  "priority": 1,
-  "call_to_action": "Share this with someone who needs to know",
-  "hashtags": ["#truth", "#awareness", "#news"]
-}]`;
+  "hook": "string (<=10 words)",
+  "script": "string (15-30s)",
+  "key_message": "string",
+  "visual_style": "string",
+  "sensitivity_level": "standard|cautious|sensitive",
+  "ethical_notes": ["string"],
+  "source_reference": "string",
+  "priority": 1-5,
+  "call_to_action": "string",
+  "hashtags": ["string"]
+}]
+</schema>`;
 
     try {
         const response = await callGroqWithFallback({
-            messages: [{ role: "user", content: prompt }],
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
             modelChain: MODEL_CHAINS.SUMMARIZE,
             temperature: 0.6,
             jsonMode: true

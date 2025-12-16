@@ -101,30 +101,37 @@ async function extractKeyFacts(
         `[${s.id}] ${s.title}: ${s.summary}`
     ).join('\n');
 
-    const prompt = `
-TOPIC: "${topic}"
+    const systemPrompt = `You are a fact extraction specialist. Identify verifiable factual claims from source material. Be precise and always cite sources. Output ONLY valid JSON arrays.`;
 
-SOURCES:
+    const userPrompt = `<topic>${topic}</topic>
+
+<sources>
 ${sourceContext}
+</sources>
 
-TASK: Extract the most important factual claims from these sources.
+<task>
+Extract 5-10 key factual claims from these sources.
+</task>
 
-For each fact:
-- State the fact clearly
-- List which source IDs support it (e.g., ["article_1", "video_2"])
+<requirements>
+- Each fact must be verifiable (dates, numbers, events, quotes)
+- Cite source IDs that support each fact
+- Prioritize most newsworthy/impactful facts
+- Be specific, not vague
+</requirements>
 
-OUTPUT: JSON array of objects with "fact" and "source_ids" fields.
-Return 5-10 key facts.
-
-Example:
+<schema>
 [
-  {"fact": "Over 100 casualties reported in the conflict", "source_ids": ["article_1", "article_3"]},
-  {"fact": "UN Security Council called emergency meeting", "source_ids": ["article_2"]}
-]`;
+  {"fact": "string", "source_ids": ["article_1", "video_2"]}
+]
+</schema>`;
 
     try {
         const response = await callGroqWithFallback({
-            messages: [{ role: "user", content: prompt }],
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
             modelChain: MODEL_CHAINS.SUMMARIZE,
             temperature: 0.2,
             jsonMode: true
@@ -159,35 +166,47 @@ async function analyzeGeopolitics(
         `[${s.id}] ${s.title}`
     ).join('\n');
 
-    const prompt = `
-TOPIC: "${topic}"
+    const systemPrompt = `You are a geopolitical analyst specializing in conflict analysis. Think step-by-step about actors, motivations, and implications. Output ONLY valid JSON.`;
 
-KEY FACTS:
+    const userPrompt = `<topic>${topic}</topic>
+
+<facts>
 ${factsContext}
+</facts>
 
-AVAILABLE SOURCES:
+<sources>
 ${sourceContext}
+</sources>
 
-TASK: Provide geopolitical analysis including:
-1. Summary of the situation (2-3 paragraphs)
-2. Key actors involved (name, role, motivations)
-3. Power dynamics at play
-4. Regional/global implications
-5. Major claims with source references
+<task>
+Provide comprehensive geopolitical analysis.
+</task>
 
-OUTPUT: JSON object matching this structure:
+<steps>
+1. Summarize the situation (2-3 paragraphs)
+2. Identify key actors (governments, groups, individuals)
+3. Analyze power dynamics
+4. Assess regional/global implications
+5. List major claims with source citations
+</steps>
+
+<schema>
 {
-  "summary": "...",
-  "key_actors": [{"name": "...", "role": "...", "motivations": ["..."]}],
-  "power_dynamics": "...",
-  "regional_implications": "...",
-  "claims": [{"claim": "...", "source_ids": ["article_1"]}]
-}`;
+  "summary": "2-3 paragraphs",
+  "key_actors": [{"name": "string", "role": "string", "motivations": ["string"]}],
+  "power_dynamics": "string",
+  "regional_implications": "string",
+  "claims": [{"claim": "string", "source_ids": ["article_1"]}]
+}
+</schema>`;
 
     try {
         const response = await callGroqWithFallback({
-            messages: [{ role: "user", content: prompt }],
-            modelChain: MODEL_CHAINS.CLASSIFY,  // Use higher-reasoning model
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
+            modelChain: MODEL_CHAINS.CLASSIFY,
             temperature: 0.3,
             jsonMode: true
         });
@@ -227,28 +246,38 @@ Situation: ${geopolitics.summary}
 Key Facts: ${facts.slice(0, 5).map(f => f.fact).join('; ')}
 `;
 
-    const prompt = `
+    const systemPrompt = `You are a balanced Islamic studies scholar. Provide ethical perspectives based on universal Islamic principles (justice, mercy, sanctity of life). Always include a disclaimer. Be non-sectarian. Output ONLY valid JSON.`;
+
+    const userPrompt = `<context>
 ${context}
+</context>
 
-TASK: Provide an Islamic ethical perspective on this situation.
+<task>
+Provide an Islamic ethical perspective on this situation.
+</task>
 
-IMPORTANT GUIDELINES:
+<guidelines>
 - This is ONE interpretation, not authoritative religious ruling
-- Focus on universal Islamic principles (justice, mercy, protection of life)
-- Be respectful and balanced
+- Focus on: justice ('adl), mercy (rahma), protection of life
+- Be balanced and respectful
 - Avoid sectarian positions
+</guidelines>
 
-OUTPUT: JSON object:
+<schema>
 {
   "disclaimer": "This represents one perspective based on general Islamic principles and should not be considered authoritative religious guidance.",
-  "ethical_considerations": ["...", "..."],
-  "relevant_principles": ["...", "..."],
-  "community_impact": "..."
-}`;
+  "ethical_considerations": ["string", "string"],
+  "relevant_principles": ["string", "string"],
+  "community_impact": "string"
+}
+</schema>`;
 
     try {
         const response = await callGroqWithFallback({
-            messages: [{ role: "user", content: prompt }],
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
             modelChain: MODEL_CHAINS.CLASSIFY,
             temperature: 0.4,
             jsonMode: true
@@ -280,32 +309,45 @@ async function assessRisksAndPredictions(
 ): Promise<{ risks: RiskItem[]; predictions: Prediction[] }> {
     console.log('[DeepAnalysis] Stage 4: Assessing risks and predictions...');
 
-    const prompt = `
-TOPIC: "${topic}"
+    const systemPrompt = `You are a risk analyst and forecaster. Assess risks systematically and make evidence-based predictions. Think step-by-step. Output ONLY valid JSON.`;
 
-SITUATION:
+    const userPrompt = `<topic>${topic}</topic>
+
+<situation>
 ${geopolitics.summary}
+</situation>
 
-KEY ACTORS:
+<actors>
 ${geopolitics.key_actors.map(a => `- ${a.name}: ${a.role}`).join('\n')}
+</actors>
 
-TASK: Generate:
-1. Risk matrix (3-5 risks with likelihood, impact, mitigation)
-2. Predictions (3-5 scenarios with timeframe, probability, basis)
+<task>
+Generate risk assessment and predictions.
+</task>
 
-OUTPUT: JSON object:
+<requirements>
+- 3-5 risks with likelihood, impact, and mitigation strategies
+- 3-5 predictions with timeframe and probability
+- Base predictions on current trajectory and actor motivations
+</requirements>
+
+<schema>
 {
   "risks": [
-    {"risk": "...", "likelihood": "low|medium|high", "impact": "low|medium|high", "mitigation": "..."}
+    {"risk": "string", "likelihood": "low|medium|high", "impact": "low|medium|high", "mitigation": "string"}
   ],
   "predictions": [
-    {"scenario": "...", "timeframe": "...", "probability": "unlikely|possible|likely", "basis": "..."}
+    {"scenario": "string", "timeframe": "string", "probability": "unlikely|possible|likely", "basis": "string"}
   ]
-}`;
+}
+</schema>`;
 
     try {
         const response = await callGroqWithFallback({
-            messages: [{ role: "user", content: prompt }],
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
             modelChain: MODEL_CHAINS.CLASSIFY,
             temperature: 0.4,
             jsonMode: true
@@ -332,34 +374,48 @@ async function synthesizeRecommendations(
 ): Promise<{ recommendations: Recommendation[]; humanitarian: HumanitarianImpact }> {
     console.log('[DeepAnalysis] Stage 5: Synthesizing recommendations...');
 
-    const prompt = `
-TOPIC: "${topic}"
+    const systemPrompt = `You are a policy advisor and humanitarian analyst. Generate actionable recommendations for different stakeholders. Focus on practical, implementable actions. Output ONLY valid JSON.`;
 
-KEY FINDINGS:
+    const userPrompt = `<topic>${topic}</topic>
+
+<findings>
 ${facts.slice(0, 5).map(f => `- ${f.fact}`).join('\n')}
+</findings>
 
-RISKS:
-${risks.map(r => `- ${r.risk} (${r.likelihood} likelihood, ${r.impact} impact)`).join('\n')}
+<risks>
+${risks.map(r => `- ${r.risk} (${r.likelihood}/${r.impact})`).join('\n')}
+</risks>
 
-TASK: Generate:
-1. Actionable recommendations (for policymakers, activists, community, etc.)
-2. Humanitarian impact assessment
+<task>
+Generate recommendations and humanitarian impact assessment.
+</task>
 
-OUTPUT: JSON object:
+<target_audiences>
+- Policymakers
+- Activists/Advocates
+- Community members
+- Media/Journalists
+</target_audiences>
+
+<schema>
 {
   "recommendations": [
-    {"action": "...", "target_audience": "...", "priority": "low|medium|high"}
+    {"action": "specific action", "target_audience": "who", "priority": "low|medium|high"}
   ],
   "humanitarian": {
-    "affected_populations": ["..."],
-    "immediate_needs": ["..."],
-    "long_term_concerns": ["..."]
+    "affected_populations": ["string"],
+    "immediate_needs": ["string"],
+    "long_term_concerns": ["string"]
   }
-}`;
+}
+</schema>`;
 
     try {
         const response = await callGroqWithFallback({
-            messages: [{ role: "user", content: prompt }],
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
             modelChain: MODEL_CHAINS.CLASSIFY,
             temperature: 0.3,
             jsonMode: true

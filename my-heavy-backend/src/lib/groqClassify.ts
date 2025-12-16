@@ -19,57 +19,56 @@ export async function classifyVideosGroq(
     topic: string,
     videos: VideoResult[]
 ): Promise<ClassifiedVideo[]> {
-    const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const currentDate = new Date().toISOString().split('T')[0];
 
-    // Build video summaries for the prompt
-    const videoSummaries = videos.map((v, i) => `
-[VIDEO_${i + 1}]
-ID: ${v.id}
+    const videoSummaries = videos.map((v, i) => `<video index="${i + 1}" id="${v.id}">
 Title: ${v.title}
 Channel: ${v.channel}
 Views: ${v.views}
 Published: ${v.publishedAt}
-Description: ${v.description?.substring(0, 300) || "No description"}
-`).join("\n");
+Description: ${v.description?.substring(0, 250) || "No description"}
+</video>`).join("\n");
 
-    const prompt = `
-TOPIC: "${topic}"
-TODAY'S DATE: ${currentDate}
+    const systemPrompt = `You are a video research curator. Score and filter videos for inclusion in a professional research report. Be strict - only recommend high-quality, relevant content. Output ONLY valid JSON.`;
 
-CANDIDATE VIDEOS:
+    const userPrompt = `<topic>${topic}</topic>
+<date>${currentDate}</date>
+
+<videos>
 ${videoSummaries}
+</videos>
 
-TASK: Classify each video for inclusion in a research report about the TOPIC.
+<task>
+Classify each video for research report inclusion.
+</task>
 
-CRITERIA:
-1. RELEVANCE: Is the video directly related to the topic? (Score 0-100)
-2. INFORMATION VALUE: Does title/description suggest useful content?
-3. CREDIBILITY: Is the channel reputable (news org, official, documentary)?
-4. RECENCY: Is the video recent enough? (Reject if more than 2 years old for news topics)
-5. VIEW COUNT: Higher views suggest higher credibility/reach.
+<criteria>
+- RELEVANCE (0-100): Directly about the topic?
+- CREDIBILITY: News org, official source, documentary?
+- RECENCY: Within 2 years for news topics?
+- QUALITY: Title/description suggest substantive content?
+</criteria>
 
-OUTPUT FORMAT (Strict JSON):
+<rules>
+- keep=true only if score >= 60 AND meets all criteria
+- keep=false for clickbait, music videos, unrelated content
+</rules>
+
+<schema>
 {
-    "classifications": [
-        {
-            "video_id": "VIDEO_1",
-            "keep": true,
-            "score": 85,
-            "reason": "1-2 sentence explanation"
-        }
-    ]
+  "classifications": [
+    {"video_id": "VIDEO_1", "keep": boolean, "score": 0-100, "reason": "string"}
+  ]
 }
-
-ONLY output valid JSON. No extra text.
-`;
+</schema>`;
 
     try {
         const text = await callGroqWithFallback({
             messages: [
-                { role: "system", content: "You are a JSON-only video classification agent." },
-                { role: "user", content: prompt }
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
             ],
-            modelChain: MODEL_CHAINS.CLASSIFY, // Heavy model for reasoning
+            modelChain: MODEL_CHAINS.CLASSIFY,
             temperature: 0.1,
             jsonMode: true
         });

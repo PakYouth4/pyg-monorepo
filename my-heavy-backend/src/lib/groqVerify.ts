@@ -14,61 +14,57 @@ export interface VerifiedVideo extends TranscribedVideo {
 export async function verifyVideosGroq(
     topic: string,
     videos: TranscribedVideo[],
-    articleContext: string // Consolidated summary of articles
+    articleContext: string
 ): Promise<VerifiedVideo[]> {
     const groq = getGroqClient();
 
-    // We process videos in batches to avoid huge prompts, 
-    // but for now, let's try to fit 5 videos + context in 128k window (easy).
+    const videoDescriptions = videos.map((v) => `<video id="${v.id}">
+Title: ${v.title}
+Channel: ${v.channel}
+Published: ${v.publishedAt}
+Transcript: ${v.transcript.substring(0, 1500)}
+</video>`).join("\n");
 
-    const videoDescriptions = videos.map((v, i) => `
-    [VIDEO_ID: ${v.id}]
-    Title: ${v.title}
-    Channel: ${v.channel}
-    Published: ${v.publishedAt}
-    Description: ${v.description}
-    Transcript/Snippet: "${v.transcript.substring(0, 2000)}..." (truncated)
-    `).join("\n\n");
+    const systemPrompt = `You are a fact-checking video analyst. Verify videos against known facts. Be strict - only approve videos with genuine, accurate information. Output ONLY valid JSON.`;
 
-    const prompt = `
-    TOPIC: "${topic}"
-    
-    VERIFIED FACTS (from News Articles):
-    """
-    ${articleContext.substring(0, 20000)}
-    """
+    const userPrompt = `<topic>${topic}</topic>
 
-    CANDIDATE VIDEOS:
-    """
-    ${videoDescriptions}
-    """
+<verified_facts>
+${articleContext.substring(0, 15000)}
+</verified_facts>
 
-    TASK: Verify each video based on the following Strict Criteria:
-    1. RELEVANCE: Is this video intimately related to the TOPIC?
-    2. INFORMATION: Does it contain actual substantial information (not just clickbait/music)?
-    3. TRUTH: Is the information consistent with the Verified Facts? (Mark "false" if it contradicts known facts).
-    4. FRESHNESS: Is the video reasonably recent or timeless? (Mark "false" if it's ancient/obsolete for this specific news topic).
+<videos>
+${videoDescriptions}
+</videos>
 
-    OUTPUT FORMAT (Strict JSON Object):
+<task>
+Verify each video against these criteria:
+1. RELEVANT - Directly about the topic (not tangential)
+2. INFORMATIVE - Contains substantial information (not clickbait/music)
+3. ACCURATE - Consistent with verified facts (not misinformation)
+4. FRESH - Recent or timeless content (not outdated)
+</task>
+
+<schema>
+{
+  "verifications": [
     {
-        "verifications": [
-            {
-                "video_id": "string",
-                "is_relevant": boolean,
-                "has_info": boolean,
-                "is_true": boolean,
-                "is_fresh": boolean,
-                "reason": "Short explanation"
-            }
-        ]
+      "video_id": "string",
+      "is_relevant": boolean,
+      "has_info": boolean,
+      "is_true": boolean,
+      "is_fresh": boolean,
+      "reason": "1-2 sentence explanation"
     }
-    `;
+  ]
+}
+</schema>`;
 
     try {
         const completion = await groq.chat.completions.create({
             messages: [
-                { role: "system", content: "You are a JSON-only Verification Agent." },
-                { role: "user", content: prompt }
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
             ],
             model: "llama-3.3-70b-versatile",
             temperature: 0.1,

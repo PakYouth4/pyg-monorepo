@@ -4,38 +4,46 @@ import { callGroqWithFallback, MODEL_CHAINS, getGroqClient } from './groq';
 export async function generateVideoQueriesV2(topic: string, articleSummaries: any[]): Promise<string[]> {
 
     // 1. Prepare Context from Articles
-    const context = articleSummaries.map((art, i) => `
-    [Article ${i + 1}] ${art.headline_summary}
-    Publisher: ${art.publisher}
-    Key Facts:
-    ${art.summary_bullets.join("\n")}
-    `).join("\n\n");
+    const context = articleSummaries.map((art, i) =>
+        `[${i + 1}] ${art.headline_summary} (${art.publisher})`
+    ).join("\n");
 
-    const prompt = `
-    MAIN TOPIC: "${topic}"
-    
-    CONTEXT (What we know so far from News):
-    """
-    ${context}
-    """
+    const systemPrompt = `You are a YouTube search specialist. Generate precise video search queries to find news footage, interviews, and documentaries. Output ONLY valid JSON arrays.`;
 
-    TASK: Generate 10 NEW, HIGHLY SPECIFIC YouTube search queries to find visual evidence for this report.
-    - These queries must be DIFFERENT from generic topic searches.
-    - Use specific names, places, events, or phrases mentioned in the context.
-    - Target "raw footage", "speech", "interview", "report", or "documentary" styles.
-    - Do NOT mention "article" or "text". Look for VIDEO content.
+    const userPrompt = `<topic>${topic}</topic>
 
-    OUTPUT FORMAT (Strict JSON Array):
-    ["query 1", "query 2", ..., "query 10"]
-    `;
+<context>
+${context}
+</context>
+
+<task>
+Generate 10 YouTube search queries to find VIDEO coverage of this topic.
+</task>
+
+<requirements>
+- Use specific names, places, events from the context
+- Mix of: "raw footage", "interview", "news report", "documentary"
+- Each query: 2-5 words, optimized for YouTube search
+- NO generic queries like just the topic name
+- Target RECENT coverage
+</requirements>
+
+<format>
+Output a JSON array of 10 strings. Nothing else.
+</format>
+
+<example>
+Topic: "Gaza Hospital Strike"
+Output: ["Al-Ahli hospital strike footage", "Gaza hospital attack interview", "IDF statement hospital", "WHO Gaza hospital response", ...]
+</example>`;
 
     try {
         const text = await callGroqWithFallback({
             messages: [
-                { role: "system", content: "You are a JSON-only API." },
-                { role: "user", content: prompt }
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
             ],
-            modelChain: MODEL_CHAINS.KEYWORDS, // Use KEYWORDS chain (fast models)
+            modelChain: MODEL_CHAINS.KEYWORDS,
             temperature: 0.4,
             jsonMode: true
         });
