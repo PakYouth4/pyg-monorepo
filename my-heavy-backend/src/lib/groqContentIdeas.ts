@@ -19,7 +19,7 @@ export interface ContentIdea {
     sensitivity_level: 'standard' | 'cautious' | 'sensitive';
     ethical_notes: string[];         // Things to be careful about
     source_reference: string;        // Which fact/claim this is based on
-    priority: 1 | 2 | 3 | 4 | 5;     // 1 = highest priority
+    priority: number;                // 1-5, 1 = highest priority
     call_to_action: string;
     hashtags: string[];
 }
