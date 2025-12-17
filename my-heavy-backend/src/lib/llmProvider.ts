@@ -72,19 +72,21 @@ export const TASK_MODELS = {
     ],
 
     DEEP_ANALYSIS: [
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' },
         { provider: 'openrouter', model: 'qwen/qwen3-235b-a22b:free' },
-        { provider: 'openrouter', model: 'openai/gpt-oss-120b:free' },
+        { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' },
         { provider: 'openrouter', model: 'allenai/olmo-3-32b-think:free' }
     ],
 
     CONTENT_IDEAS: [
+        { provider: 'groq', model: 'llama-3.1-8b-instant' },
         { provider: 'openrouter', model: 'qwen/qwen3-235b-a22b:free' },
-        { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' },
-        { provider: 'groq', model: 'llama-3.3-70b-versatile' }
+        { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' }
     ],
 
     // Huge context tasks
     REPORT: [
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' },
         { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' },
         { provider: 'openrouter', model: 'amazon/nova-2-lite-v1:free' },
         { provider: 'openrouter', model: 'qwen/qwen3-coder:free' }
