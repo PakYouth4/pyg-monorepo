@@ -884,9 +884,26 @@ app.post('/step2-videos', async (req, res) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let evaluations: any[] = [];
         try {
-            evaluations = JSON.parse(filterResult);
-        } catch {
+            const parsed = JSON.parse(filterResult);
+            // Ensure it's actually an array
+            if (Array.isArray(parsed)) {
+                evaluations = parsed;
+            } else if (typeof parsed === 'object' && Array.isArray(parsed.evaluations)) {
+                evaluations = parsed.evaluations;
+            } else if (typeof parsed === 'object' && Array.isArray(parsed.results)) {
+                evaluations = parsed.results;
+            } else {
+                throw new Error('Parsed result is not an array');
+            }
+        } catch (parseError) {
+            console.error('[Step 2] Failed to parse evaluations JSON:', parseError);
+            console.log('[Step 2] Raw LLM response:', filterResult);
             // Fallback: keep all videos if parsing fails
+            evaluations = candidates.map(c => ({ id: c.id, isRelevant: true }));
+        }
+
+        // Final safety check
+        if (!Array.isArray(evaluations) || evaluations.length === 0) {
             evaluations = candidates.map(c => ({ id: c.id, isRelevant: true }));
         }
 
