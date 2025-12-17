@@ -698,18 +698,37 @@ app.post('/step1-5-deep', async (req, res) => {
     try {
         const { newsSummary, sources } = req.body;
 
+        if (!sources || !Array.isArray(sources) || sources.length === 0) {
+            return res.json({ deepAnalysis: "No sources provided for deep research." });
+        }
+
+        // Import Firecrawl for reliable scraping
+        const { scrapeFirecrawlV2 } = await import('./lib/firecrawl');
         // Import our LLM provider
         const { callLLM } = await import('./lib/llmProvider');
 
-        const urlsToScrape = sources.slice(0, 3);
-        const scrapedContent = [];
+        console.log(`[Step 1.5] Scraping ${Math.min(sources.length, 3)} URLs with Firecrawl...`);
 
-        for (const url of urlsToScrape) {
-            const content = await scrapeUrl(url);
-            if (content.length > 500) {
-                scrapedContent.push(`SOURCE: ${url}\nCONTENT:\n${content}\n---`);
+        // Extract URLs from sources (can be strings or objects with .url)
+        const urlsToScrape = sources.slice(0, 3).map((s: any) =>
+            typeof s === 'string' ? s : s.url
+        ).filter(Boolean);
+
+        if (urlsToScrape.length === 0) {
+            return res.json({ deepAnalysis: "No valid URLs to scrape." });
+        }
+
+        // Use Firecrawl for reliable scraping
+        const scrapeResults = await scrapeFirecrawlV2(urlsToScrape);
+
+        const scrapedContent: string[] = [];
+        for (const result of scrapeResults) {
+            if (result.status === 'success' && result.markdown.length > 500) {
+                scrapedContent.push(`SOURCE: ${result.url}\nCONTENT:\n${result.markdown.substring(0, 8000)}\n---`);
             }
         }
+
+        console.log(`[Step 1.5] Successfully scraped ${scrapedContent.length}/${urlsToScrape.length} articles`);
 
         if (scrapedContent.length === 0) {
             return res.json({ deepAnalysis: "Could not scrape deep content. Relying on summary." });
