@@ -1,42 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useBackendStatus } from '@/hooks/useBackendStatus';
 import { auth } from '@/lib/firebase';
-import { LogOut, User, Info, Shield, ChevronLeft, Terminal, Server, AlertCircle } from 'lucide-react';
+import { LogOut, User, Info, Shield, ChevronLeft, Terminal, Server, AlertCircle, Moon, RefreshCw } from 'lucide-react';
 import { useDeveloper } from '@/components/DeveloperTools';
 
 export default function SettingsPage() {
     const { user } = useAuth();
     const router = useRouter();
-    const [backendVersion, setBackendVersion] = useState<string>('Loading...');
-    const [backendStatus, setBackendStatus] = useState<'loading' | 'connected' | 'error'>('loading');
-
-    useEffect(() => {
-        const fetchBackendVersion = async () => {
-            try {
-                const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://pakyouth-heavy-backend.hf.space';
-                const response = await fetch(backendUrl, { method: 'GET' });
-                if (response.ok) {
-                    const text = await response.text();
-                    // Extract version from response like "Heavy Backend V5.0 (Multi-Provider LLM) Online 🚀"
-                    const match = text.match(/V[\d.]+\s*\([^)]+\)/);
-                    setBackendVersion(match ? match[0] : text);
-                    setBackendStatus('connected');
-                } else {
-                    setBackendVersion('Unreachable');
-                    setBackendStatus('error');
-                }
-            } catch (error) {
-                console.error('Failed to fetch backend version:', error);
-                setBackendVersion('Connection Failed');
-                setBackendStatus('error');
-            }
-        };
-        fetchBackendVersion();
-    }, []);
+    const { status: backendStatus, version: backendVersion, latency, refresh } = useBackendStatus();
 
     const handleLogout = async () => {
         try {
@@ -107,24 +83,34 @@ export default function SettingsPage() {
 
                         {/* Backend Connection Status */}
                         <div className="pt-4 border-t border-white/5 space-y-2">
-                            <div className="flex items-center gap-2">
+                            <button
+                                onClick={refresh}
+                                className="flex items-center gap-2 w-full hover:opacity-80 transition-opacity"
+                                title="Click to refresh"
+                            >
                                 {backendStatus === 'connected' ? (
                                     <Server className="w-4 h-4 text-green-500" />
+                                ) : backendStatus === 'sleeping' ? (
+                                    <Moon className="w-4 h-4 text-blue-400" />
                                 ) : backendStatus === 'error' ? (
                                     <AlertCircle className="w-4 h-4 text-red-500" />
                                 ) : (
-                                    <Server className="w-4 h-4 text-yellow-500 animate-pulse" />
+                                    <RefreshCw className="w-4 h-4 text-yellow-500 animate-spin" />
                                 )}
                                 <span className="text-xs text-gray-400">Backend:</span>
                                 <span className={`text-xs font-mono ${backendStatus === 'connected' ? 'text-green-400' :
-                                        backendStatus === 'error' ? 'text-red-400' : 'text-yellow-400'
+                                        backendStatus === 'sleeping' ? 'text-blue-400' :
+                                            backendStatus === 'error' ? 'text-red-400' : 'text-yellow-400'
                                     }`}>
                                     {backendVersion}
                                 </span>
-                            </div>
+                                {latency && backendStatus === 'connected' && (
+                                    <span className="text-[10px] text-gray-500">{latency}ms</span>
+                                )}
+                            </button>
                             <div className="flex justify-between text-xs text-gray-500">
                                 <span>Frontend v1.0.0</span>
-                                <span>Build 2025.12.16</span>
+                                <span>Build 2025.12.17</span>
                             </div>
                         </div>
                     </div>

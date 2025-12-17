@@ -14,6 +14,7 @@ import FilterModal from "@/components/FilterModal";
 import { NotificationProvider, useNotifications } from "@/context/NotificationContext";
 import Link from "next/link";
 import { DeveloperProvider, useDeveloper } from "@/components/DeveloperTools";
+import BackendStatusBadge from "@/components/BackendStatusBadge";
 
 // Notification Bell Component
 function NotificationBell() {
@@ -399,14 +400,17 @@ function DashboardContent() {
                 </div>
 
                 {/* Top Right Actions */}
-                <div className="w-full md:w-auto mt-8 md:mt-0 flex items-center gap-4 justify-start md:justify-end">
-                    <NotificationBell />
-                    <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="btn-primary text-sm uppercase tracking-wider w-full md:w-auto"
-                    >
-                        NEW MANUAL RESEARCH
-                    </button>
+                <div className="w-full md:w-auto mt-8 md:mt-0 flex flex-col items-start md:items-end gap-2">
+                    <div className="flex items-center gap-4">
+                        <NotificationBell />
+                        <button
+                            onClick={() => setIsModalOpen(true)}
+                            className="btn-primary text-sm uppercase tracking-wider"
+                        >
+                            NEW MANUAL RESEARCH
+                        </button>
+                    </div>
+                    <BackendStatusBadge compact />
                 </div>
             </header>
 
