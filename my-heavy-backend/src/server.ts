@@ -34,7 +34,7 @@ const PORT = process.env.PORT || 7860; // Hugging Face Spaces default port
 
 // --- HEALTH CHECK ---
 app.get('/', (req, res) => {
-    res.send('Heavy Backend V5.0 (Multi-Provider LLM) Online 🚀');
+    res.send('Heavy Backend V5.1 (Captions-Only + Multi-LLM) Online 🚀');
 });
 
 // --- PREFLIGHT CHECK ---
@@ -784,11 +784,37 @@ app.post('/step2-videos', async (req, res) => {
 
         let keywords: string[] = [];
         try {
-            keywords = JSON.parse(keywordResult);
-        } catch {
-            // Fallback: extract words from response
-            keywords = keywordResult.match(/\w+/g)?.slice(0, 5) || ['news', 'update', 'breaking'];
+            const parsed = JSON.parse(keywordResult);
+            // Ensure it's actually an array
+            if (Array.isArray(parsed)) {
+                keywords = parsed;
+            } else if (typeof parsed === 'object' && parsed.keywords) {
+                // Handle {keywords: [...]} format
+                keywords = parsed.keywords;
+            } else {
+                throw new Error('Parsed result is not an array');
+            }
+        } catch (parseError) {
+            console.error('[Step 2] Failed to parse keywords JSON:', parseError);
+            console.log('[Step 2] Raw LLM response:', keywordResult);
+            // Fallback: extract words from response using regex
+            const words = keywordResult.match(/["']?(\w{3,})["']?/g);
+            if (words && words.length > 0) {
+                keywords = words.slice(0, 5).map(w => w.replace(/["']/g, ''));
+            } else {
+                // Ultimate fallback: extract topic words from newsSummary
+                const topicWords = newsSummary.match(/\b[A-Z][a-z]{3,}\b/g) || [];
+                keywords = topicWords.slice(0, 5).length > 0
+                    ? topicWords.slice(0, 5)
+                    : ['news', 'update', 'breaking', 'latest', 'today'];
+            }
         }
+
+        // Final safety: ensure keywords is always an array with at least one item
+        if (!Array.isArray(keywords) || keywords.length === 0) {
+            keywords = ['news', 'update', 'breaking'];
+        }
+
         debugLog.push(`🔍 SEO Terms Generated: ${JSON.stringify(keywords)}`);
 
         // Step 2b: Search YouTube using YouTube Data API
