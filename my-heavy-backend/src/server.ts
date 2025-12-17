@@ -611,32 +611,58 @@ app.post('/v2/step5-summarize', async (req, res) => {
 // --- STEP 1: NEWS ---
 app.post('/step1-news', async (req, res) => {
     try {
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) {
-            return res.status(500).json({ error: "Server Error: GEMINI_API_KEY is not set." });
+        const { topic } = req.body;
+
+        if (!topic) {
+            return res.status(400).json({ error: "Topic is required" });
         }
 
-        const { topic } = req.body;
-        const genAI = new GoogleGenerativeAI(apiKey);
+        console.log(`[Step 1] Searching news for: ${topic}`);
 
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash",
-            tools: [{ googleSearchRetrieval: {} }]
+        // Use Tavily for news search
+        const { searchTavilyV2 } = await import('./lib/tavily');
+
+        // Generate search keywords from topic
+        const searchQueries = [
+            `${topic} latest news`,
+            `${topic} breaking news today`,
+            `${topic} recent updates`
+        ];
+
+        const searchResults = await searchTavilyV2(searchQueries);
+
+        if (searchResults.length === 0) {
+            return res.json({
+                newsSummary: `No recent news found for topic: ${topic}`,
+                sources: []
+            });
+        }
+
+        // Summarize the news using our LLM provider
+        const { callLLM } = await import('./lib/llmProvider');
+
+        const newsContent = searchResults.slice(0, 10).map(r =>
+            `[${r.title}]\n${r.content}`
+        ).join('\n\n---\n\n');
+
+        const summary = await callLLM({
+            task: 'SUMMARIZE',
+            messages: [
+                { role: 'system', content: 'You are a news analyst. Summarize the following news articles about the given topic. Be concise but comprehensive. Highlight key facts, developments, and important details.' },
+                { role: 'user', content: `Topic: ${topic}\n\nNews Articles:\n${newsContent}\n\nProvide a comprehensive summary of the latest news on this topic.` }
+            ],
+            temperature: 0.3
         });
 
-        const prompt = `Find the latest, most credible news stories from the last 24 hours regarding: ${topic}. Provide a detailed summary.`;
-        const result = await model.generateContent(prompt);
+        const sources = searchResults.slice(0, 10).map(r => ({
+            title: r.title,
+            url: r.url
+        }));
 
-        const candidate = result.response.candidates?.[0];
-        const metadata = candidate?.groundingMetadata;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sources = metadata?.groundingChunks?.map((chunk: any) => ({
-            title: chunk.web?.title || "Source",
-            url: chunk.web?.uri || "#"
-        })) || [];
+        console.log(`[Step 1] Found ${searchResults.length} articles, summarized`);
 
         res.json({
-            newsSummary: result.response.text(),
+            newsSummary: summary,
             sources: sources
         });
     } catch (error) {
