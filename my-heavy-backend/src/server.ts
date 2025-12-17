@@ -697,8 +697,9 @@ async function scrapeUrl(url: string): Promise<string> {
 app.post('/step1-5-deep', async (req, res) => {
     try {
         const { newsSummary, sources } = req.body;
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+        // Import our LLM provider
+        const { callLLM } = await import('./lib/llmProvider');
 
         const urlsToScrape = sources.slice(0, 3);
         const scrapedContent = [];
@@ -731,8 +732,16 @@ app.post('/step1-5-deep', async (req, res) => {
             Markdown. Start with "### 🕵️‍♂️ Deep Research Findings".
         `;
 
-        const result = await model.generateContent(prompt);
-        res.json({ deepAnalysis: result.response.text() });
+        const result = await callLLM({
+            task: 'DEEP_ANALYSIS',
+            messages: [
+                { role: 'system', content: 'You are an investigative journalist who digs deeper into news stories.' },
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.3
+        });
+
+        res.json({ deepAnalysis: result });
 
     } catch (error) {
         console.error("Step 1.5 Error:", error);
@@ -745,21 +754,13 @@ app.post('/step1-5-deep', async (req, res) => {
 app.post('/step2-videos', async (req, res) => {
     try {
         const { newsSummary } = req.body;
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash",
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: SchemaType.ARRAY,
-                    items: { type: SchemaType.STRING }
-                }
-            }
-        });
+        // Import our LLM provider
+        const { callLLM } = await import('./lib/llmProvider');
 
         const debugLog = [];
 
+        // Step 2a: Generate keywords using LLM
         const keywordPrompt = `
             NEWS CONTEXT: "${newsSummary}"
             TASK: Generate 5 BROAD, SINGLE-WORD SEO tags to find video footage.
@@ -768,13 +769,29 @@ app.post('/step2-videos', async (req, res) => {
             2. USE NOUNS.
             3. NO ABSTRACT CONCEPTS.
             4. MUST be high-volume search terms.
-            Example Output: ["Gaza", "Rafah", "IDF", "UNRWA", "Egypt"]
+            OUTPUT: Return ONLY a JSON array of strings. Example: ["Gaza", "Rafah", "IDF", "UNRWA", "Egypt"]
         `;
 
-        const keywordResult = await model.generateContent(keywordPrompt);
-        const keywords = JSON.parse(keywordResult.response.text());
+        const keywordResult = await callLLM({
+            task: 'KEYWORDS',
+            messages: [
+                { role: 'system', content: 'You generate SEO keywords for YouTube searches. Return ONLY valid JSON arrays.' },
+                { role: 'user', content: keywordPrompt }
+            ],
+            temperature: 0.3,
+            jsonMode: true
+        });
+
+        let keywords: string[] = [];
+        try {
+            keywords = JSON.parse(keywordResult);
+        } catch {
+            // Fallback: extract words from response
+            keywords = keywordResult.match(/\w+/g)?.slice(0, 5) || ['news', 'update', 'breaking'];
+        }
         debugLog.push(`🔍 SEO Terms Generated: ${JSON.stringify(keywords)}`);
 
+        // Step 2b: Search YouTube using YouTube Data API
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let candidates: any[] = [];
 
@@ -796,7 +813,7 @@ app.post('/step2-videos', async (req, res) => {
                     candidates = [...candidates, ...found];
                 }
             } catch (e) {
-                console.error("Search error", e);
+                console.error("YouTube API search error:", e);
             }
         }
 
@@ -807,25 +824,7 @@ app.post('/step2-videos', async (req, res) => {
             return res.json({ videos: [], queries: keywords, debug: debugLog });
         }
 
-        const filterModel = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash",
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: SchemaType.ARRAY,
-                    items: {
-                        type: SchemaType.OBJECT,
-                        properties: {
-                            id: { type: SchemaType.STRING },
-                            isRelevant: { type: SchemaType.BOOLEAN },
-                            reason: { type: SchemaType.STRING }
-                        },
-                        required: ["id", "isRelevant"]
-                    }
-                }
-            }
-        });
-
+        // Step 2c: Filter videos using LLM
         const filterPrompt = `
             ORIGINAL NEWS STORY: "${newsSummary}"
             CANDIDATE VIDEOS: ${JSON.stringify(candidates.map(c => ({
@@ -833,13 +832,29 @@ app.post('/step2-videos', async (req, res) => {
             title: c.title,
             desc: c.description.substring(0, 150)
         })))}
-            TASK: Evaluate EACH video. Is it relevant?
-            OUTPUT: JSON Array of objects with "id", "isRelevant", "reason".
+            TASK: Evaluate EACH video. Is it relevant to the news story?
+            OUTPUT: Return ONLY a JSON array of objects with "id", "isRelevant" (boolean), "reason" (string).
         `;
 
-        const filterResult = await filterModel.generateContent(filterPrompt);
+        const filterResult = await callLLM({
+            task: 'CLASSIFY',
+            messages: [
+                { role: 'system', content: 'You classify video relevance. Return ONLY valid JSON arrays.' },
+                { role: 'user', content: filterPrompt }
+            ],
+            temperature: 0.2,
+            jsonMode: true
+        });
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const evaluations: any[] = JSON.parse(filterResult.response.text());
+        let evaluations: any[] = [];
+        try {
+            evaluations = JSON.parse(filterResult);
+        } catch {
+            // Fallback: keep all videos if parsing fails
+            evaluations = candidates.map(c => ({ id: c.id, isRelevant: true }));
+        }
+
         const validIds = evaluations.filter(e => e.isRelevant).map(e => e.id);
 
         debugLog.push(`✅ AI Evaluated ${evaluations.length} videos. Approved: ${validIds.length}`);
