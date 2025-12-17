@@ -965,15 +965,20 @@ app.post('/step2-5-transcript', async (req, res) => {
 app.post('/step3-report', async (req, res) => {
     try {
         const { newsSummary, deepAnalysis, sources, videos, queries, topic, reportId, isPublic, userId } = req.body;
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+        console.log(`[Step 3] Generating report for topic: ${topic}, reportId: ${reportId}`);
+
+        // Import our LLM provider
+        const { callLLM } = await import('./lib/llmProvider');
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const videosText = videos.map((v: any, i: number) => `[Video ${i + 1}] ${v.title} (${v.channel})\nTranscript: ${v.transcript}`).join("\n\n");
+        const videosText = videos && videos.length > 0
+            ? videos.map((v: any, i: number) => `[Video ${i + 1}] ${v.title} (${v.channel})\nTranscript: ${v.transcript || '(No transcript)'}`).join("\n\n")
+            : "No video intelligence available.";
 
         const prompt = `
             SOURCE 1: NEWS SUMMARY
-            ${newsSummary}
+            ${newsSummary || "No news summary available."}
 
             SOURCE 1.5: DEEP DIVE FINDINGS
             ${deepAnalysis || "No deep analysis available."}
@@ -996,27 +1001,39 @@ app.post('/step3-report', async (req, res) => {
             Keep it markdown formatted.
         `;
 
-        const result = await model.generateContent(prompt);
-        const finalReport = result.response.text();
+        console.log(`[Step 3] Generating main report...`);
+        const finalReport = await callLLM({
+            task: 'DEEP_ANALYSIS',
+            messages: [
+                { role: 'system', content: 'You are an investigative journalist writing intelligence reports.' },
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.4
+        });
 
+        console.log(`[Step 3] Report generated. Generating content ideas...`);
         const ideasPrompt = `Based on this report:\n${finalReport}\nGenerate 3 viral Instagram Reel ideas that visualize these hidden truths.`;
-        const ideasResult = await model.generateContent(ideasPrompt);
-        const ideas = ideasResult.response.text();
+        const ideas = await callLLM({
+            task: 'SUMMARIZE',
+            messages: [
+                { role: 'system', content: 'You generate viral content ideas for social media.' },
+                { role: 'user', content: ideasPrompt }
+            ],
+            temperature: 0.5
+        });
 
         // Save to Firestore
         const reportData = {
             summary: finalReport,
             ideas: ideas,
             status: 'completed',
-            videoCount: videos.length,
-            sources: sources,
-            videos: videos,
-            queries: queries
+            videoCount: videos?.length || 0,
+            sources: sources || [],
+            videos: videos || [],
+            queries: queries || []
         };
 
-        // Note: In this backend context, we might not have the full client-side Firestore auth context.
-        // We use Admin SDK for writes if needed, or just return the data and let frontend save it?
-        // The original code used client SDK. Here we use Admin SDK (db from lib/firebase).
+        console.log(`[Step 3] Saving to Firestore...`);
 
         let finalDocId = reportId;
         if (reportId) {
@@ -1025,26 +1042,26 @@ app.post('/step3-report', async (req, res) => {
             const docRef = await db.collection("reports").add({
                 ...reportData,
                 topic: topic,
-                date: admin.firestore.Timestamp.now(),
+                date: new Date(),
                 docUrl: "#",
                 type: topic ? "manual" : "weekly",
                 isPublic: isPublic || false,
                 userId: userId,
-                createdAt: admin.firestore.Timestamp.now(),
+                createdAt: new Date(),
             });
             finalDocId = docRef.id;
         }
 
+        console.log(`[Step 3] Report saved. ID: ${finalDocId}`);
         res.json({ id: finalDocId, summary: finalReport });
 
     } catch (error) {
         console.error("Step 3 Error:", error);
-        res.status(500).json({ error: "Failed to generate report" });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const errorMessage = error instanceof Error ? error.message : (error as any)?.toString() || 'Unknown error';
+        res.status(500).json({ error: `Failed to generate report: ${errorMessage}` });
     }
 });
-
-// Need to import admin for Timestamp usage above
-import * as admin from 'firebase-admin';
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
