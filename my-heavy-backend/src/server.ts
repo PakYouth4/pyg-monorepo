@@ -34,7 +34,7 @@ const PORT = process.env.PORT || 7860; // Hugging Face Spaces default port
 
 // --- HEALTH CHECK ---
 app.get('/', (req, res) => {
-    res.send('Heavy Backend V5.1 (Captions-Only + Multi-LLM) Online 🚀');
+    res.send('Heavy Backend V5.2 (Optimized LLM Usage) Online 🚀');
 });
 
 // --- PREFLIGHT CHECK ---
@@ -638,31 +638,21 @@ app.post('/step1-news', async (req, res) => {
             });
         }
 
-        // Summarize the news using our LLM provider
-        const { callLLM } = await import('./lib/llmProvider');
-
-        const newsContent = searchResults.slice(0, 10).map(r =>
-            `[${r.title}]\n${r.content}`
+        // Tavily already provides summarized content - no need for LLM here!
+        // Just combine the snippets into a readable summary
+        const newsSummary = searchResults.slice(0, 10).map(r =>
+            `**${r.title}**\n${r.content}`
         ).join('\n\n---\n\n');
-
-        const summary = await callLLM({
-            task: 'SUMMARIZE',
-            messages: [
-                { role: 'system', content: 'You are a news analyst. Summarize the following news articles about the given topic. Be concise but comprehensive. Highlight key facts, developments, and important details.' },
-                { role: 'user', content: `Topic: ${topic}\n\nNews Articles:\n${newsContent}\n\nProvide a comprehensive summary of the latest news on this topic.` }
-            ],
-            temperature: 0.3
-        });
 
         const sources = searchResults.slice(0, 10).map(r => ({
             title: r.title,
             url: r.url
         }));
 
-        console.log(`[Step 1] Found ${searchResults.length} articles, summarized`);
+        console.log(`[Step 1] Found ${searchResults.length} articles from Tavily`);
 
         res.json({
-            newsSummary: summary,
+            newsSummary: newsSummary,
             sources: sources
         });
     } catch (error) {
