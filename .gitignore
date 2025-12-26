@@ -11,6 +11,8 @@ npm-debug.log*
 .env*.local
 .secrets.local
 API_KEYS_REFERENCE.txt
+encrypton_too.py
+encrypted message.txt
 
 # Build
 dist/
