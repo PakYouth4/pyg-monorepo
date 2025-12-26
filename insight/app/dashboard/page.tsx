@@ -238,22 +238,7 @@ export default function Dashboard() {
 
 function DashboardContent() {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const { enableDevMode, isDevMode } = useDeveloper();
-    const [tapCount, setTapCount] = useState(0);
-
-    const handleLogoTap = () => {
-        if (isDevMode) return;
-
-        const newCount = tapCount + 1;
-        setTapCount(newCount);
-
-        if (newCount === 7) {
-            if (confirm("Enable Developer Mode?")) {
-                enableDevMode();
-            }
-            setTapCount(0);
-        }
-    };
+    const { isDevMode } = useDeveloper();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const { reports, loading: reportsLoading, error, deleteReport } = useReports();
@@ -368,10 +353,7 @@ function DashboardContent() {
                         className="fixed inset-y-0 left-0 w-72 bg-black border-r border-white/10 z-50 p-8 flex flex-col"
                     >
                         <div className="mb-8">
-                            <h2
-                                onClick={handleLogoTap}
-                                className="text-2xl font-bold text-white tracking-tight mb-2 cursor-pointer select-none active:scale-95 transition-transform"
-                            >
+                            <h2 className="text-2xl font-bold text-white tracking-tight mb-2">
                                 Insight.
                             </h2>
                             <p className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-4">Navigation</p>
