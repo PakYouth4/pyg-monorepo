@@ -1,12 +1,20 @@
 /**
  * orchestrator.ts
  * AI-powered workflow orchestrator with step evaluation, smart retries, and logging
+ * ENHANCED: Alternative functions, step re-execution, AI strategy selection
  */
 
 import { callLLM, TaskType } from './llmProvider';
 import { db } from './firebase';
 import { FieldValue } from 'firebase-admin/firestore';
-import { getRetryStrategy, getStepRetryConfig, StrategyType, RetryContext } from './retryStrategies';
+import {
+    getRetryStrategy,
+    getStepRetryConfig,
+    StrategyType,
+    RetryContext,
+    getAIStrategyPrompt,
+    getNextAlternativeFunction
+} from './retryStrategies';
 
 // ============ TYPES ============
 
@@ -31,6 +39,9 @@ export interface AIEvaluation {
     decision: AIDecision;
     reason: string;
     modifiedInput?: Record<string, unknown>;
+    alternativeFunction?: string;
+    rerunStep?: string;
+    strategyUsed?: string;
 }
 
 export interface StepResult<T = unknown> {
@@ -45,7 +56,7 @@ export interface StepConfig<T = unknown> {
     name: string;
     execute: (input?: Record<string, unknown>) => Promise<T>;
     evaluate: (result: T) => StepEvaluation;
-    retryStrategy?: 'broader_query' | 'different_source' | 'skip' | 'none';
+    retryStrategy?: StrategyType;
     maxRetries?: number;
     canSkip?: boolean;
     fallback?: () => Promise<T>;
