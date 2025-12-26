@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Terminal, X, Minimize2, Maximize2, Trash2, Minus, Power } from 'lucide-react';
+import { Terminal, X, Minimize2, Maximize2, Trash2, Minus, Power, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- Types ---
@@ -124,15 +124,17 @@ function DeveloperConsole() {
     const [isMinimized, setIsMinimized] = useState(true);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [hasUnread, setHasUnread] = useState(false);
+    const prevLogCount = React.useRef(logs.length);
 
-    // Watch logs for new entries to show dot
+    // Watch for NEW logs while minimized
     useEffect(() => {
-        if (logs.length > 0 && isMinimized) {
+        if (isMinimized && logs.length > prevLogCount.current) {
             setHasUnread(true);
         }
-    }, [logs, isMinimized]);
+        prevLogCount.current = logs.length;
+    }, [logs.length, isMinimized]);
 
-    // Reset unread when opening
+    // Clear unread when console is opened
     useEffect(() => {
         if (!isMinimized) {
             setHasUnread(false);
@@ -206,6 +208,17 @@ function DeveloperConsole() {
                     </div>
 
                     <div className="flex items-center gap-1">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const text = logs.map(l => `[${l.timestamp}] ${l.type.toUpperCase()}: ${l.message}`).join('\n');
+                                navigator.clipboard.writeText(text);
+                            }}
+                            className="p-1.5 hover:bg-white/10 rounded text-gray-500 hover:text-white transition-colors"
+                            title="Copy Logs"
+                        >
+                            <Copy className="w-3.5 h-3.5" />
+                        </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); clearLogs(); }}
                             className="p-1.5 hover:bg-white/10 rounded text-gray-500 hover:text-white transition-colors"

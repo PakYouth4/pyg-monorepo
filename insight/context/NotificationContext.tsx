@@ -219,10 +219,27 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
         } catch (error) {
             clearInterval(interval);
-            console.error("[Scan V3] Fatal Error:", error instanceof Error ? error.message : error);
-            if (error instanceof Error && error.stack) console.error(error.stack);
 
-            const errorMessage = error instanceof Error ? error.message : String(error);
+            // Comprehensive error serialization
+            let errorMessage = 'Unknown error';
+            try {
+                if (error instanceof Error) {
+                    errorMessage = error.message || error.name || 'Error (no message)';
+                    console.error(`[Scan V3] Fatal Error: ${errorMessage}`);
+                    if (error.stack) console.error(error.stack);
+                } else if (typeof error === 'object' && error !== null) {
+                    errorMessage = JSON.stringify(error);
+                    if (errorMessage === '{}') errorMessage = 'Network/Connection Error';
+                    console.error(`[Scan V3] Fatal Error (object):`, errorMessage);
+                } else {
+                    errorMessage = String(error) || 'Empty error';
+                    console.error(`[Scan V3] Fatal Error:`, errorMessage);
+                }
+            } catch (e) {
+                errorMessage = 'Could not parse error';
+                console.error('[Scan V3] Fatal Error: Could not parse error object');
+            }
+
             update({
                 status: 'Research Failed',
                 error: errorMessage,
