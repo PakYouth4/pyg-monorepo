@@ -5,7 +5,7 @@
 
 import { callLLM, TaskType } from './llmProvider';
 import { db } from './firebase';
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // ============ TYPES ============
 
@@ -93,8 +93,8 @@ export class WorkflowOrchestrator {
 
         // Save to Firestore
         try {
-            await updateDoc(doc(db, 'reports', this.reportId), {
-                orchestratorLogs: arrayUnion(logEntry)
+            await db.collection('reports').doc(this.reportId).update({
+                orchestratorLogs: FieldValue.arrayUnion(logEntry)
             });
         } catch (e) {
             console.error('[Orchestrator] Failed to save log to Firestore:', e);
