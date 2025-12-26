@@ -115,7 +115,7 @@ export class WorkflowOrchestrator {
         // Save to Firestore
         try {
             await db.collection('reports').doc(this.reportId).update({
-                orchestratorLogs: FieldValue.arrayUnion(logEntry)
+                orchestratorLogs: FieldValue.arrayUnion(JSON.parse(JSON.stringify(logEntry)))
             });
         } catch (e) {
             console.error('[Orchestrator] Failed to save log to Firestore:', e);
