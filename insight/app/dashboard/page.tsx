@@ -7,7 +7,7 @@ import ReportListItem from "@/components/ReportListItem";
 import ManualResearchModal from "@/components/ManualResearchModal";
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Menu, Search, LogOut, Filter, Bell, X, Eye } from "lucide-react";
+import { User, Menu, Search, LogOut, Filter, Bell, X, Eye, Sparkles } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import FilterModal from "@/components/FilterModal";
 
@@ -16,6 +16,7 @@ import Link from "next/link";
 import { DeveloperProvider, useDeveloper } from "@/components/DeveloperTools";
 import BackendStatusBadge from "@/components/BackendStatusBadge";
 import OrchestratorLogViewer from "@/components/OrchestratorLogViewer";
+import AISuggestionsViewer from "@/components/AISuggestionsViewer";
 
 // Notification Bell Component
 function NotificationBell() {
@@ -275,6 +276,7 @@ function DashboardContent() {
         visibility: 'all' as 'all' | 'public' | 'private'
     });
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+    const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
 
     const [greetingText, setGreetingText] = useState('');
     const fullGreeting = "Assalamualaikum,";
@@ -426,6 +428,14 @@ function DashboardContent() {
                 {/* Top Right Actions */}
                 <div className="w-full md:w-auto mt-8 md:mt-0 flex flex-col items-start md:items-end gap-2">
                     <div className="flex items-center gap-4">
+                        {/* AI Suggestions Button */}
+                        <button
+                            onClick={() => setIsSuggestionsOpen(true)}
+                            className="relative p-2 text-gray-400 hover:text-purple-400 transition-colors"
+                            title="AI Improvement Suggestions"
+                        >
+                            <Sparkles className="w-5 h-5" />
+                        </button>
                         <NotificationBell />
                         <button
                             onClick={() => setIsModalOpen(true)}
@@ -437,6 +447,12 @@ function DashboardContent() {
                     <BackendStatusBadge compact />
                 </div>
             </header>
+
+            {/* AI Suggestions Viewer Modal */}
+            <AISuggestionsViewer
+                isOpen={isSuggestionsOpen}
+                onClose={() => setIsSuggestionsOpen(false)}
+            />
 
             {/* KPI Summary Cards */}
             <div className="grid grid-cols-3 gap-4 mb-12">
