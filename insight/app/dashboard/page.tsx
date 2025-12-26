@@ -228,11 +228,7 @@ function SwipeableNotificationItem({ n, onDismiss, isDevMode }: { n: any, onDism
 
 export default function Dashboard() {
     return (
-        <DeveloperProvider>
-            <NotificationProvider>
-                <DashboardContent />
-            </NotificationProvider>
-        </DeveloperProvider>
+        <DashboardContent />
     );
 }
 

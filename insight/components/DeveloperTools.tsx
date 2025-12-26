@@ -45,8 +45,6 @@ export function DeveloperProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const savedMode = localStorage.getItem('pyg_dev_mode') === 'true';
         setIsDevMode(savedMode);
-        // DON'T auto-open the console - keep it minimized/hidden until user clicks
-        // setIsVisible is left as false - user must manually toggle
     }, []);
 
     // Intercept Console Logs when dev mode is active
@@ -100,7 +98,6 @@ export function DeveloperProvider({ children }: { children: ReactNode }) {
         setIsDevMode(true);
         localStorage.setItem('pyg_dev_mode', 'true');
         addLog('Developer Mode Enabled', 'success');
-        // DON'T auto-open console - user will see the floating button
         return true;
     };
 
@@ -124,38 +121,48 @@ export function DeveloperProvider({ children }: { children: ReactNode }) {
 // --- Console UI Component ---
 function DeveloperConsole() {
     const { isVisible, logs, clearLogs, disableDevMode, toggleVisibility } = useDeveloper();
-    // ALWAYS start minimized - even on page navigation
     const [isMinimized, setIsMinimized] = useState(true);
     const [isFullScreen, setIsFullScreen] = useState(false);
+    const [hasUnread, setHasUnread] = useState(false);
 
-    // Reset to minimized when navigating (when component remounts)
+    // Watch logs for new entries to show dot
+    useEffect(() => {
+        if (logs.length > 0 && isMinimized) {
+            setHasUnread(true);
+        }
+    }, [logs, isMinimized]);
+
+    // Reset unread when opening
+    useEffect(() => {
+        if (!isMinimized) {
+            setHasUnread(false);
+        }
+    }, [isMinimized]);
+
+    // Reset to minimized on mount (navigation)
     useEffect(() => {
         setIsMinimized(true);
-        setIsFullScreen(false);
     }, []);
 
-    // Minimized floating button state
+    // Minimized UI - Clean & Minimal
     if (isMinimized) {
         return (
             <motion.div
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
-                whileHover={{ scale: 1.1 }}
+                whileHover={{ scale: 1.05 }}
                 drag
-                dragConstraints={{ left: -window.innerWidth + 80, right: 0, top: -window.innerHeight + 80, bottom: 0 }}
-                className="fixed bottom-4 right-4 z-[9999] cursor-pointer"
+                dragConstraints={{ left: -window.innerWidth + 50, right: 0, top: -window.innerHeight + 50, bottom: 0 }}
+                className="fixed bottom-6 right-6 z-[9999] cursor-pointer group"
                 onClick={() => setIsMinimized(false)}
             >
-                <div className="w-12 h-12 bg-gradient-to-br from-green-900 to-green-950 border border-green-500/50 rounded-full flex items-center justify-center shadow-lg shadow-green-900/30 backdrop-blur-sm hover:border-green-400 transition-colors">
-                    <Terminal className="w-5 h-5 text-green-400" />
-                    {/* Status Dot */}
-                    <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-black animate-pulse" />
-                    {/* Log count badge */}
-                    {logs.length > 0 && (
-                        <div className="absolute -bottom-1 -left-1 min-w-[18px] h-[18px] bg-red-600 rounded-full flex items-center justify-center text-[9px] font-bold text-white px-1">
-                            {logs.length > 99 ? '99+' : logs.length}
-                        </div>
+                <div className="w-10 h-10 bg-black/60 backdrop-blur-md border border-white/10 rounded-xl flex items-center justify-center shadow-lg hover:bg-black/80 hover:border-white/20 transition-all">
+                    <Terminal className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" />
+
+                    {/* Subtle Red Dot for Activity */}
+                    {hasUnread && (
+                        <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
                     )}
                 </div>
             </motion.div>
@@ -169,53 +176,46 @@ function DeveloperConsole() {
                 initial={{ y: 20, opacity: 0, scale: 0.95 }}
                 animate={{ y: 0, opacity: 1, scale: 1 }}
                 exit={{ y: 20, opacity: 0, scale: 0.95 }}
-                className={`fixed z-[9999] bg-gray-950 border border-green-500/30 shadow-2xl shadow-green-900/10 font-mono text-xs flex flex-col transition-all duration-300 overflow-hidden
-                    ${isFullScreen ? 'inset-0 w-full h-full rounded-none' : 'bottom-4 right-4 w-[95vw] md:w-[600px] rounded-xl'}
+                className={`fixed z-[9999] bg-gray-950/95 backdrop-blur-xl border border-white/10 shadow-2xl font-mono text-xs flex flex-col transition-all duration-300 overflow-hidden
+                    ${isFullScreen ? 'inset-0 w-full h-full rounded-none' : 'bottom-6 right-6 w-[95vw] md:w-[600px] rounded-xl'}
                     ${isFullScreen ? 'h-full' : 'max-h-[70vh] h-[400px]'}
                 `}
             >
                 {/* Header */}
                 <div
-                    className="bg-gradient-to-r from-green-900/30 to-green-950/30 border-b border-green-500/20 p-3 flex items-center justify-between cursor-pointer select-none"
+                    className="bg-white/5 border-b border-white/5 p-3 flex items-center justify-between cursor-pointer select-none"
                     onDoubleClick={() => setIsFullScreen(!isFullScreen)}
                 >
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-red-500 hover:brightness-110" onClick={(e) => { e.stopPropagation(); setIsMinimized(true); }} />
-                            <div className="w-3 h-3 rounded-full bg-yellow-500 hover:brightness-110" onClick={(e) => { e.stopPropagation(); setIsMinimized(true); }} />
-                            <div className="w-3 h-3 rounded-full bg-green-500 hover:brightness-110" onClick={(e) => { e.stopPropagation(); setIsFullScreen(!isFullScreen); }} />
+                        {/* Traffic Lights */}
+                        <div className="flex items-center gap-1.5 group">
+                            <div className="w-3 h-3 rounded-full bg-red-500/80 hover:bg-red-500 flex items-center justify-center transition-colors" onClick={(e) => { e.stopPropagation(); setIsMinimized(true); }}>
+                                <X className="w-2 h-2 text-black opacity-0 group-hover:opacity-100" />
+                            </div>
+                            <div className="w-3 h-3 rounded-full bg-yellow-500/80 hover:bg-yellow-500 flex items-center justify-center transition-colors" onClick={(e) => { e.stopPropagation(); setIsMinimized(true); }}>
+                                <Minus className="w-2 h-2 text-black opacity-0 group-hover:opacity-100" />
+                            </div>
+                            <div className="w-3 h-3 rounded-full bg-green-500/80 hover:bg-green-500 flex items-center justify-center transition-colors" onClick={(e) => { e.stopPropagation(); setIsFullScreen(!isFullScreen); }}>
+                                {isFullScreen ?
+                                    <Minimize2 className="w-2 h-2 text-black opacity-0 group-hover:opacity-100" /> :
+                                    <Maximize2 className="w-2 h-2 text-black opacity-0 group-hover:opacity-100" />
+                                }
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2 text-green-400">
-                            <Terminal className="w-4 h-4" />
-                            <span className="font-bold tracking-wide">DEV CONSOLE</span>
-                            <span className="bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded text-[9px] font-medium">LIVE</span>
-                        </div>
+                        <span className="text-gray-400 font-medium ml-2">Developer Console</span>
                     </div>
+
                     <div className="flex items-center gap-1">
                         <button
                             onClick={(e) => { e.stopPropagation(); clearLogs(); }}
-                            className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
+                            className="p-1.5 hover:bg-white/10 rounded text-gray-500 hover:text-white transition-colors"
                             title="Clear Logs"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                            onClick={(e) => { e.stopPropagation(); setIsMinimized(true); }}
-                            className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
-                            title="Minimize"
-                        >
-                            <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setIsFullScreen(!isFullScreen); }}
-                            className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
-                            title="Toggle Full Screen"
-                        >
-                            {isFullScreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-                        </button>
-                        <button
                             onClick={(e) => { e.stopPropagation(); disableDevMode(); }}
-                            className="p-1.5 hover:bg-red-500/20 rounded text-gray-400 hover:text-red-400 transition-colors ml-1"
+                            className="p-1.5 hover:bg-red-500/20 rounded text-gray-500 hover:text-red-400 transition-colors ml-1"
                             title="Disable Dev Mode"
                         >
                             <Power className="w-3.5 h-3.5" />
@@ -224,43 +224,35 @@ function DeveloperConsole() {
                 </div>
 
                 {/* Logs Area */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin scrollbar-thumb-green-900/50 scrollbar-track-transparent">
+                <div className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                     {logs.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full text-gray-600">
-                            <Terminal className="w-8 h-8 mb-2 opacity-30" />
-                            <span className="text-sm">Waiting for system events...</span>
-                            <span className="text-[10px] mt-1 text-gray-700">Console logs will appear here</span>
+                            <Terminal className="w-8 h-8 mb-2 opacity-20" />
+                            <span className="text-sm opacity-50">Waiting for logs...</span>
                         </div>
                     )}
                     {logs.map(log => (
-                        <motion.div
+                        <div
                             key={log.id}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className={`flex gap-3 items-start py-1.5 px-2 rounded hover:bg-white/5 transition-colors
-                                ${log.type === 'error' ? 'bg-red-900/10' : ''}
+                            className={`flex gap-3 items-start py-1 px-2 rounded hover:bg-white/5 transition-colors font-mono
+                                ${log.type === 'error' ? 'bg-red-500/5 text-red-200' : ''}
+                                ${log.type === 'warn' ? 'bg-yellow-500/5 text-yellow-200' : ''}
+                                ${log.type === 'success' ? 'bg-green-500/5 text-green-200' : ''}
+                                ${log.type === 'info' ? 'text-gray-300' : ''}
                             `}
                         >
-                            <span className="text-gray-600 shrink-0 min-w-[70px] text-[10px]">{log.timestamp}</span>
-                            <span className={`whitespace-pre-wrap break-words leading-relaxed ${log.type === 'error' ? 'text-red-400' :
-                                    log.type === 'success' ? 'text-green-400' :
-                                        log.type === 'warn' ? 'text-yellow-400' :
-                                            'text-gray-300'
-                                }`}>
-                                {log.type === 'error' && <span className="text-red-500 mr-1">●</span>}
-                                {log.type === 'success' && <span className="text-green-500 mr-1">●</span>}
-                                {log.type === 'warn' && <span className="text-yellow-500 mr-1">●</span>}
-                                {log.type === 'info' && <span className="text-blue-500 mr-1">●</span>}
+                            <span className="text-gray-600 shrink-0 min-w-[60px] text-[10px] select-none">{log.timestamp}</span>
+                            <span className="whitespace-pre-wrap break-words leading-relaxed select-text">
                                 {log.message}
                             </span>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 
                 {/* Footer */}
-                <div className="border-t border-green-500/10 px-4 py-2 flex items-center justify-between text-[10px] text-gray-600 bg-black/30">
-                    <span>{logs.length} log entries</span>
-                    <span>Double-click header to toggle fullscreen</span>
+                <div className="border-t border-white/5 px-4 py-1.5 flex items-center justify-between text-[10px] text-gray-600 bg-black/20">
+                    <span>{logs.length} entries</span>
+                    <span>v1.0.0</span>
                 </div>
             </motion.div>
         </AnimatePresence>
