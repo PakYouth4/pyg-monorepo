@@ -6,6 +6,7 @@
 import { callLLM, TaskType } from './llmProvider';
 import { db } from './firebase';
 import { FieldValue } from 'firebase-admin/firestore';
+import { getRetryStrategy, getStepRetryConfig, StrategyType, RetryContext } from './retryStrategies';
 
 // ============ TYPES ============
 
@@ -110,68 +111,112 @@ export class WorkflowOrchestrator {
         currentRetry: number,
         maxRetries: number
     ): Promise<AIEvaluation> {
-        if (!this.enableAI || evaluation.quality === 'good') {
+        // Good quality = continue
+        if (evaluation.quality === 'good') {
             return { decision: 'continue', reason: 'Result quality is good' };
         }
 
-        // Default decisions based on quality
+        // Get step-specific retry config
+        const stepConfig = getStepRetryConfig(stepName);
+        const effectiveStrategy = (retryStrategy || stepConfig.strategy) as StrategyType;
+        const effectiveMaxRetries = Math.max(maxRetries, stepConfig.maxRetries);
+
+        // Create retry context
+        const retryContext: RetryContext = {
+            stepName,
+            topic: this.topic,
+            evaluation,
+            retryCount: currentRetry,
+            maxRetries: effectiveMaxRetries
+        };
+
+        // Error quality - always try to retry first
         if (evaluation.quality === 'error') {
-            if (currentRetry < maxRetries) {
-                return { decision: 'retry', reason: `Error occurred, retrying (${currentRetry + 1}/${maxRetries})` };
+            if (currentRetry < effectiveMaxRetries) {
+                const strategyResult = getRetryStrategy(effectiveStrategy, retryContext);
+                return {
+                    decision: 'retry',
+                    reason: `Error: ${evaluation.issue}. ${strategyResult.reason}`,
+                    modifiedInput: strategyResult.modifiedInput
+                };
             }
-            return { decision: 'skip', reason: 'Max retries reached after errors' };
+            return {
+                decision: stepConfig.canSkip ? 'skip' : 'continue',
+                reason: `Max retries (${effectiveMaxRetries}) reached after errors. ${stepConfig.canSkip ? 'Skipping step.' : 'Continuing anyway.'}`
+            };
         }
 
+        // Empty quality - use retry strategies with AI enhancement
         if (evaluation.quality === 'empty') {
-            if (currentRetry < maxRetries && retryStrategy !== 'none') {
-                // Use AI to suggest modified approach
-                try {
-                    const aiResponse = await callLLM({
-                        task: 'KEYWORDS' as TaskType, // Use lightweight model
-                        messages: [
-                            {
-                                role: 'system',
-                                content: 'You are a workflow optimizer. Analyze step results and suggest improvements. Return ONLY valid JSON.'
-                            },
-                            {
-                                role: 'user',
-                                content: `
+            if (currentRetry < effectiveMaxRetries && effectiveStrategy !== 'none') {
+                // Get strategy-based modification
+                const strategyResult = getRetryStrategy(effectiveStrategy, retryContext);
+
+                // Optionally enhance with AI reasoning (if enabled and first retry)
+                if (this.enableAI && currentRetry === 0) {
+                    try {
+                        const aiResponse = await callLLM({
+                            task: 'KEYWORDS' as TaskType,
+                            messages: [
+                                {
+                                    role: 'system',
+                                    content: `You are a workflow optimizer. Analyze why step "${stepName}" returned empty results and suggest a specific fix. Be concise.`
+                                },
+                                {
+                                    role: 'user',
+                                    content: `
 STEP: ${stepName}
 TOPIC: ${this.topic}
-RESULT QUALITY: ${evaluation.quality}
 ISSUE: ${evaluation.issue || 'Empty result'}
 METRICS: ${JSON.stringify(evaluation.metrics || {})}
-RETRY STRATEGY AVAILABLE: ${retryStrategy}
-CURRENT RETRY: ${currentRetry}/${maxRetries}
+SUGGESTED STRATEGY: ${strategyResult.reason}
 
-Analyze and respond with JSON:
+Respond with JSON:
 {
-    "decision": "retry" | "skip" | "fallback",
-    "reason": "Brief explanation",
-    "modification": "If retry, what should change? e.g., 'broaden search query'"
+    "analysis": "One sentence explaining why this might have failed",
+    "suggestion": "One specific actionable suggestion"
 }
 `
-                            }
-                        ],
-                        temperature: 0.3,
-                        jsonMode: true
-                    });
+                                }
+                            ],
+                            temperature: 0.2,
+                            jsonMode: true
+                        });
 
-                    const parsed = JSON.parse(aiResponse);
-                    return {
-                        decision: parsed.decision || 'skip',
-                        reason: parsed.reason || 'AI suggested skipping',
-                        modifiedInput: parsed.modification ? { modification: parsed.modification } : undefined
-                    };
-                } catch (e) {
-                    console.warn('[Orchestrator] AI decision failed, using default:', e);
+                        const parsed = JSON.parse(aiResponse);
+                        return {
+                            decision: 'retry',
+                            reason: `${parsed.analysis} → ${parsed.suggestion}`,
+                            modifiedInput: {
+                                ...strategyResult.modifiedInput,
+                                aiSuggestion: parsed.suggestion
+                            }
+                        };
+                    } catch (e) {
+                        console.warn('[Orchestrator] AI enhancement failed, using strategy default:', e);
+                    }
                 }
+
+                // Fallback to strategy-only decision
+                return {
+                    decision: strategyResult.shouldRetry ? 'retry' : 'skip',
+                    reason: strategyResult.reason,
+                    modifiedInput: strategyResult.modifiedInput
+                };
             }
-            return { decision: 'skip', reason: 'Empty result, skipping step' };
+
+            // Max retries reached for empty result
+            return {
+                decision: stepConfig.canSkip ? 'skip' : 'continue',
+                reason: `Empty result after ${currentRetry} retries. ${stepConfig.canSkip ? 'Skipping step.' : 'Continuing with empty data.'}`
+            };
         }
 
-        // Partial quality - continue but warn
-        return { decision: 'continue', reason: `Partial result: ${evaluation.issue || 'Some data missing'}` };
+        // Partial quality - continue but log the issue
+        return {
+            decision: 'continue',
+            reason: `Partial result accepted: ${evaluation.issue || 'Some data missing, but sufficient to continue'}`
+        };
     }
 
     // ============ MAIN STEP RUNNER ============
@@ -210,9 +255,13 @@ Analyze and respond with JSON:
                 );
 
                 if (aiDecision.decision !== 'continue' || lastEvaluation.quality !== 'good') {
-                    await this.log(name, `${aiDecision.reason}`, 'ai_decision', {
+                    await this.log(name, `🤖 ${aiDecision.reason}`, 'ai_decision', {
                         decision: aiDecision.decision,
-                        quality: lastEvaluation.quality
+                        quality: lastEvaluation.quality,
+                        retryCount,
+                        maxRetries,
+                        modifiedInput: aiDecision.modifiedInput,
+                        metrics: lastEvaluation.metrics
                     });
                 }
 
@@ -229,7 +278,14 @@ Analyze and respond with JSON:
 
                 if (aiDecision.decision === 'retry') {
                     retryCount++;
-                    await this.log(name, `Retrying (${retryCount}/${maxRetries})...`, 'warning');
+                    const modificationInfo = aiDecision.modifiedInput
+                        ? ` with modifications: ${JSON.stringify(aiDecision.modifiedInput)}`
+                        : '';
+                    await this.log(name, `⟳ Retrying (${retryCount}/${maxRetries})${modificationInfo}`, 'warning', {
+                        retryCount,
+                        maxRetries,
+                        modifiedInput: aiDecision.modifiedInput
+                    });
                     continue;
                 }
 
