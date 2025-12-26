@@ -1092,7 +1092,7 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
         });
         if (!response.ok) {
             const errText = await response.text();
-            throw new Error(`${path} failed: ${response.status} - ${errText.substring(0, 200)}`);
+            throw new Error(`${path} failed: ${response.status} - ${errText.substring(0, 2000)}`);
         }
         return response.json();
     };
