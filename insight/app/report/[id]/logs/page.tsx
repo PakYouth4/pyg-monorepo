@@ -9,8 +9,10 @@ import { ArrowLeft, ExternalLink, FileText, Youtube, Search, Database } from 'lu
 
 interface LogEntry {
     timestamp: number;
+    step: string;
     message: string;
-    type: 'info' | 'error' | 'success' | 'warning';
+    type: 'info' | 'error' | 'success' | 'warning' | 'ai_decision';
+    data?: any;
 }
 
 interface LogVideo {
@@ -29,7 +31,8 @@ interface LogReport {
     queries?: string[];
     videos?: LogVideo[];
     sources?: string[];
-    logs?: LogEntry[]; // New logs field
+    logs?: LogEntry[]; // Legacy logs
+    orchestratorLogs?: LogEntry[]; // V3 logs
     userId: string;
     isPublic: boolean;
 }
@@ -80,7 +83,7 @@ export default function LogsPage({ params }: { params: { id: string } }) {
                             queries: data.queries || [],
                             videos: data.videos || [],
                             sources: data.sources || [],
-                            logs: data.logs || [], // Fetch logs
+                            logs: data.orchestratorLogs || data.logs || [], // Prefer orchestratorLogs
                             userId: ownerId,
                             isPublic: isPublic
                         });
@@ -156,12 +159,21 @@ export default function LogsPage({ params }: { params: { id: string } }) {
                         <FileText className="w-5 h-5" />
                         <h2 className="font-bold uppercase tracking-wider text-sm">Agent Execution Timeline</h2>
                     </div>
-                    <div className="space-y-2 max-h-60 overflow-y-auto font-mono text-xs">
+                    <div className="space-y-2 max-h-96 overflow-y-auto font-mono text-xs">
                         {report.logs && report.logs.length > 0 ? (
                             report.logs.map((log, i) => (
-                                <div key={i} className={`flex gap-3 ${log.type === 'error' ? 'text-red-400' : log.type === 'warning' ? 'text-yellow-400' : log.type === 'success' ? 'text-green-400' : 'text-gray-400'}`}>
-                                    <span className="opacity-50 min-w-[80px]">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                                    <span>{log.message}</span>
+                                <div key={i} className={`flex gap-3 p-2 rounded ${log.type === 'error' ? 'bg-red-900/20 text-red-400' :
+                                        log.type === 'warning' ? 'bg-yellow-900/20 text-yellow-400' :
+                                            log.type === 'success' ? 'bg-green-900/20 text-green-400' :
+                                                log.type === 'ai_decision' ? 'bg-purple-900/20 text-purple-400' :
+                                                    'text-gray-400'
+                                    }`}>
+                                    <span className="opacity-50 min-w-[80px] shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                                    <span className="min-w-[100px] shrink-0 text-gray-500 uppercase text-[10px]">{log.step}</span>
+                                    <span className="flex-1">
+                                        {log.type === 'ai_decision' && '🤖 '}
+                                        {log.message}
+                                    </span>
                                 </div>
                             ))
                         ) : (

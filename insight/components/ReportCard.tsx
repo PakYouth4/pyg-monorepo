@@ -65,16 +65,13 @@ export default function ReportCard({ report, onDelete }: ReportCardProps) {
                     <div className="text-xs font-mono text-gray-500 uppercase tracking-widest group-hover:text-white transition-colors">
                         [Read Report]
                     </div>
-                    {isDevMode && (
-                        <Link
-                            href={`/report/${report.id}/logs`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-xs font-mono text-gray-600 hover:text-primary uppercase tracking-widest z-10 px-2 py-1 hover:bg-gray-900 rounded transition-colors flex items-center gap-1"
-                        >
-                            <span className="hidden group-hover:inline">Logs</span>
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        </Link>
-                    )}
+                    <Link
+                        href={`/report/${report.id}/logs`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs font-mono text-gray-600 hover:text-primary uppercase tracking-widest z-10 px-2 py-1 hover:bg-gray-900 rounded transition-colors"
+                    >
+                        Details
+                    </Link>
                 </div>
             </div>
         </Link>
