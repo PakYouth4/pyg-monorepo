@@ -219,7 +219,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
         } catch (error) {
             clearInterval(interval);
-            console.error("[Scan V3] Fatal Error:", error);
+            console.error("[Scan V3] Fatal Error:", error instanceof Error ? error.message : error);
+            if (error instanceof Error && error.stack) console.error(error.stack);
+
             const errorMessage = error instanceof Error ? error.message : String(error);
             update({
                 status: 'Research Failed',
