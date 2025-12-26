@@ -7,7 +7,7 @@ import ReportListItem from "@/components/ReportListItem";
 import ManualResearchModal from "@/components/ManualResearchModal";
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Menu, Search, LogOut, Filter, Bell, X } from "lucide-react"; // Added Bell, X, FileText
+import { User, Menu, Search, LogOut, Filter, Bell, X, Eye } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import FilterModal from "@/components/FilterModal";
 
@@ -15,6 +15,7 @@ import { NotificationProvider, useNotifications } from "@/context/NotificationCo
 import Link from "next/link";
 import { DeveloperProvider, useDeveloper } from "@/components/DeveloperTools";
 import BackendStatusBadge from "@/components/BackendStatusBadge";
+import OrchestratorLogViewer from "@/components/OrchestratorLogViewer";
 
 // Notification Bell Component
 function NotificationBell() {
@@ -116,6 +117,7 @@ function NotificationBell() {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function SwipeableNotificationItem({ n, onDismiss, isDevMode }: { n: any, onDismiss: (id: string) => void, isDevMode: boolean }) {
     const [isMobile, setIsMobile] = useState(false);
+    const [showLogViewer, setShowLogViewer] = useState(false);
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -125,79 +127,101 @@ function SwipeableNotificationItem({ n, onDismiss, isDevMode }: { n: any, onDism
     }, []);
 
     return (
-        <div className="relative overflow-hidden border-b border-white/5">
-            {/* Background Action (Delete) - Only visible on mobile */}
-            {isMobile && (
-                <div className="absolute inset-0 bg-red-900/50 flex items-center justify-end px-4">
-                    <X className="w-5 h-5 text-red-500" />
-                </div>
-            )}
-
-            {/* Foreground Content */}
-            <motion.div
-                drag={isMobile && n.isComplete ? "x" : false} // Only allow drag if complete AND on mobile
-                dragConstraints={{ left: -100, right: 0 }}
-                dragElastic={0.1} // Add resistance
-                onDragEnd={(e, { offset }) => {
-                    // Increased threshold to -100 (harder to trigger accidentally)
-                    if (offset.x < -100) {
-                        onDismiss(n.id);
-                    }
-                }}
-                className="relative bg-gray-900 p-4 hover:bg-white/5 transition-colors"
-            >
-                <div className="flex justify-between items-start mb-2">
-                    <h4 className="text-sm font-bold text-white truncate w-3/4">{n.topic}</h4>
-                    {n.isComplete && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onDismiss(n.id); }}
-                            className="text-gray-500 hover:text-white p-2 -mr-2 -mt-2" // Increased touch target
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                    )}
-                </div>
-                <div className="flex justify-between text-[10px] text-gray-400 mb-1">
-                    <span>{n.status}</span>
-                    <span>{n.progress}%</span>
-                </div>
-                <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden mb-2">
-                    <div
-                        className={`h-full transition-all duration-500 ${n.error ? 'bg-red-500' : 'bg-green-500'}`} // Changed to green for success
-                        style={{ width: `${n.progress}%` }}
-                    />
-                </div>
-
-                {!n.isComplete && (
-                    <div className="flex justify-end mt-2 gap-2">
-                        {n.reportId && isDevMode && (
-                            <Link
-                                href={`/report/${n.reportId}/logs`}
-                                className="text-[10px] font-bold text-gray-500 hover:text-primary uppercase tracking-wider transition-colors py-1 px-2 flex items-center gap-1"
-                            >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                LOGS
-                            </Link>
-                        )}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onDismiss(n.id); }}
-                            className="text-[10px] font-bold text-gray-500 hover:text-red-400 uppercase tracking-wider transition-colors py-1 px-2"
-                        >
-                            CANCEL
-                        </button>
+        <>
+            <div className="relative overflow-hidden border-b border-white/5">
+                {/* Background Action (Delete) - Only visible on mobile */}
+                {isMobile && (
+                    <div className="absolute inset-0 bg-red-900/50 flex items-center justify-end px-4">
+                        <X className="w-5 h-5 text-red-500" />
                     </div>
                 )}
 
-                {n.isComplete && !n.error && n.reportId && (
-                    <Link
-                        href={`/report/${n.reportId}`}
-                        className="block w-full text-center py-2 bg-green-900/20 text-green-500 text-xs font-bold uppercase tracking-wider rounded hover:bg-green-900/40 transition-colors"
-                    >
-                        View Report
-                    </Link>
-                )}
-            </motion.div>
-        </div>
+                {/* Foreground Content */}
+                <motion.div
+                    drag={isMobile && n.isComplete ? "x" : false} // Only allow drag if complete AND on mobile
+                    dragConstraints={{ left: -100, right: 0 }}
+                    dragElastic={0.1} // Add resistance
+                    onDragEnd={(e, { offset }) => {
+                        // Increased threshold to -100 (harder to trigger accidentally)
+                        if (offset.x < -100) {
+                            onDismiss(n.id);
+                        }
+                    }}
+                    className="relative bg-gray-900 p-4 hover:bg-white/5 transition-colors"
+                >
+                    <div className="flex justify-between items-start mb-2">
+                        <h4 className="text-sm font-bold text-white truncate w-3/4">{n.topic}</h4>
+                        {n.isComplete && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onDismiss(n.id); }}
+                                className="text-gray-500 hover:text-white p-2 -mr-2 -mt-2" // Increased touch target
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+                    <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                        <span>{n.status}</span>
+                        <span>{n.progress}%</span>
+                    </div>
+                    <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden mb-2">
+                        <div
+                            className={`h-full transition-all duration-500 ${n.error ? 'bg-red-500' : 'bg-green-500'}`} // Changed to green for success
+                            style={{ width: `${n.progress}%` }}
+                        />
+                    </div>
+
+                    {!n.isComplete && (
+                        <div className="flex justify-end mt-2 gap-2">
+                            {n.reportId && isDevMode && (
+                                <Link
+                                    href={`/report/${n.reportId}/logs`}
+                                    className="text-[10px] font-bold text-gray-500 hover:text-primary uppercase tracking-wider transition-colors py-1 px-2 flex items-center gap-1"
+                                >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                    LOGS
+                                </Link>
+                            )}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onDismiss(n.id); }}
+                                className="text-[10px] font-bold text-gray-500 hover:text-red-400 uppercase tracking-wider transition-colors py-1 px-2"
+                            >
+                                CANCEL
+                            </button>
+                        </div>
+                    )}
+
+                    {/* View Details button - always visible when we have a reportId */}
+                    {n.reportId && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setShowLogViewer(true); }}
+                            className="flex items-center gap-1 text-[10px] font-bold text-purple-400 hover:text-purple-300 uppercase tracking-wider transition-colors py-1 mt-2"
+                        >
+                            <Eye className="w-3 h-3" />
+                            View AI Details
+                        </button>
+                    )}
+
+                    {n.isComplete && !n.error && n.reportId && (
+                        <Link
+                            href={`/report/${n.reportId}`}
+                            className="block w-full text-center py-2 bg-green-900/20 text-green-500 text-xs font-bold uppercase tracking-wider rounded hover:bg-green-900/40 transition-colors mt-2"
+                        >
+                            View Report
+                        </Link>
+                    )}
+                </motion.div>
+            </div>
+
+            {/* Orchestrator Log Viewer Modal */}
+            {n.reportId && (
+                <OrchestratorLogViewer
+                    reportId={n.reportId}
+                    isOpen={showLogViewer}
+                    onClose={() => setShowLogViewer(false)}
+                />
+            )}
+        </>
     );
 }
 
