@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from './useAuth';
 
@@ -23,8 +23,19 @@ export function useReports() {
     const { user } = useAuth(); // Reactive user state
 
     useEffect(() => {
-        // Query reports ordered by date (newest first)
-        const q = query(collection(db, 'reports'), orderBy('date', 'desc'));
+        // Don't query if user is not authenticated yet
+        if (!user) {
+            setReports([]);
+            setLoading(false);
+            return;
+        }
+
+        // Query only reports owned by the current user
+        const q = query(
+            collection(db, 'reports'),
+            where('userId', '==', user.uid),
+            orderBy('date', 'desc')
+        );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             try {
@@ -47,12 +58,7 @@ export function useReports() {
                     .filter(report => {
                         // Filter out generating reports
                         if (report.status === 'generating') return false;
-
-                        // VISIBILITY LOGIC:
-                        // Show if Public OR Owned by current user
-                        // We use the reactive 'user' object here
-                        const isOwner = user && report.userId === user.uid;
-                        return report.isPublic || isOwner;
+                        return true;
                     });
 
                 setReports(fetchedReports);
