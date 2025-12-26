@@ -140,7 +140,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 status: "generating",
                 createdAt: Timestamp.now(),
                 isPublic: config.isPublic,
-                userId: config.userId
+                userId: config.userId,
+                orchestratorLogs: [] // For V3 logging
             });
             reportId = docRef.id;
             console.log(`[Scan] Placeholder created. ID: ${reportId}`);
@@ -154,11 +155,79 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             return;
         }
 
-        // 3. Start Simulation & Fetch (Background Process)
-        runBackgroundScan(scanId, reportId, topic, config);
+        // 3. Choose workflow version (V3 = orchestrated, V2 = legacy)
+        const useOrchestrator = config.useOrchestrator ?? true; // Default to V3
+
+        if (useOrchestrator) {
+            runOrchestratedScan(scanId, reportId, topic, config);
+        } else {
+            runBackgroundScan(scanId, reportId, topic, config);
+        }
 
         // 4. Attach Firestore Listener (Backup for refresh/disconnect)
         monitorScanProgress(scanId, reportId);
+    };
+
+    // V3: Orchestrated Workflow - Backend handles all steps with AI evaluation
+    const runOrchestratedScan = async (scanId: string, reportId: string, topic: string, config: any) => {
+        const update = (data: Partial<ScanNotification>) => updateNotification(scanId, data);
+        const interval = simulateProgress(scanId);
+
+        try {
+            console.log(`[Scan V3] Starting Orchestrated Workflow...`);
+            update({ status: 'AI Orchestrator Initialized... 🤖', progress: 15 });
+
+            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7860';
+
+            const response = await fetch(`${backendUrl}/v3/orchestrated-workflow`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    topic,
+                    reportId,
+                    isPublic: config.isPublic,
+                    userId: config.userId
+                })
+            });
+
+            clearInterval(interval);
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Orchestrated workflow failed: ${response.status} - ${errText.substring(0, 100)}`);
+            }
+
+            const data = await response.json();
+            console.log("[Scan V3] Orchestrated workflow complete:", data);
+
+            if (data.success) {
+                update({
+                    progress: 100,
+                    status: 'Research Complete (AI Orchestrated)',
+                    isComplete: true,
+                    reportId: reportId
+                });
+            } else {
+                update({
+                    progress: 100,
+                    status: 'Research Completed with Issues',
+                    isComplete: true,
+                    reportId: reportId,
+                    error: data.error
+                });
+            }
+
+        } catch (error) {
+            clearInterval(interval);
+            console.error("[Scan V3] Fatal Error:", error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            update({
+                status: 'Research Failed',
+                error: errorMessage,
+                isComplete: true,
+                progress: 100
+            });
+        }
     };
 
     const runBackgroundScan = async (scanId: string, reportId: string, topic: string, config: any) => {

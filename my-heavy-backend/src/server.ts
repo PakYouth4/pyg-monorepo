@@ -1063,6 +1063,292 @@ app.post('/step3-report', async (req, res) => {
     }
 });
 
+// --- ORCHESTRATED WORKFLOW (V3) ---
+// Uses AI evaluation, smart retries, and detailed logging
+app.post('/v3/orchestrated-workflow', async (req, res) => {
+    const { topic, reportId, isPublic, userId } = req.body;
+
+    if (!topic || !reportId) {
+        return res.status(400).json({ error: 'Topic and reportId are required' });
+    }
+
+    // Import orchestrator
+    const { createOrchestrator } = await import('./lib/orchestrator');
+    const { stepEvaluators } = await import('./lib/stepEvaluators');
+
+    const orchestrator = createOrchestrator({
+        reportId,
+        topic,
+        enableAIDecisions: true,
+        verbose: true
+    });
+
+    try {
+        await orchestrator.log('workflow', `Starting orchestrated workflow for: ${topic}`, 'info');
+
+        // === STEP 1: NEWS ===
+        const newsResult = await orchestrator.runStep({
+            name: 'news',
+            execute: async () => {
+                const { searchTavilyV2 } = await import('./lib/tavily');
+                const searchQueries = [
+                    `${topic} latest news`,
+                    `${topic} breaking news today`,
+                    `${topic} recent updates`
+                ];
+                const searchResults = await searchTavilyV2(searchQueries);
+                const newsSummary = searchResults.slice(0, 10).map(r =>
+                    `**${r.title}**\n${r.content}`
+                ).join('\n\n---\n\n');
+                const sources = searchResults.slice(0, 10).map(r => ({
+                    title: r.title,
+                    url: r.url
+                }));
+                return { newsSummary, sources };
+            },
+            evaluate: stepEvaluators.news,
+            retryStrategy: 'broader_query',
+            maxRetries: 2,
+            canSkip: false
+        });
+
+        if (!newsResult.success) {
+            throw new Error('News step failed and cannot be skipped');
+        }
+
+        // === STEP 1.5: DEEP RESEARCH ===
+        const deepResult = await orchestrator.runStep({
+            name: 'deepResearch',
+            execute: async () => {
+                const { scrapeFirecrawlV2 } = await import('./lib/firecrawl');
+                const { callLLM } = await import('./lib/llmProvider');
+
+                const urlsToScrape = (newsResult.data.sources as Array<{ url: string }>).slice(0, 3).map(s => s.url);
+                if (urlsToScrape.length === 0) {
+                    return { deepAnalysis: '' };
+                }
+
+                const scrapeResults = await scrapeFirecrawlV2(urlsToScrape);
+                const scrapedContent: string[] = [];
+                for (const result of scrapeResults) {
+                    if (result.status === 'success' && result.markdown.length > 500) {
+                        scrapedContent.push(`SOURCE: ${result.url}\nCONTENT:\n${result.markdown.substring(0, 8000)}\n---`);
+                    }
+                }
+
+                if (scrapedContent.length === 0) {
+                    return { deepAnalysis: '' };
+                }
+
+                const prompt = `
+                    ORIGINAL SUMMARY:
+                    "${newsResult.data.newsSummary}"
+
+                    DEEP DIVE CONTENT (Full Text from Articles):
+                    ${scrapedContent.join("\n")}
+
+                    TASK:
+                    Analyze the Deep Dive Content.
+                    1. Find 3 specific facts, quotes, or numbers that were MISSING from the original summary.
+                    2. Verify if the original summary aligns with the deep text.
+                    3. Output a "Deep Insight" section.
+
+                    OUTPUT FORMAT:
+                    Markdown. Start with "### 🕵️‍♂️ Deep Research Findings".
+                `;
+
+                const deepAnalysis = await callLLM({
+                    task: 'DEEP_ANALYSIS',
+                    messages: [
+                        { role: 'system', content: 'You are an investigative journalist who digs deeper into news stories.' },
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature: 0.3
+                });
+
+                return { deepAnalysis };
+            },
+            evaluate: stepEvaluators.deepResearch,
+            retryStrategy: 'skip',
+            maxRetries: 1,
+            canSkip: true
+        });
+
+        // === STEP 2: VIDEOS ===
+        const videosResult = await orchestrator.runStep({
+            name: 'videos',
+            execute: async () => {
+                const { callLLM } = await import('./lib/llmProvider');
+                const { getSmartTranscript } = await import('./lib/youtubeHelper');
+
+                const keywordPrompt = `
+                    NEWS CONTEXT: "${newsResult.data.newsSummary}"
+                    TASK: Generate 5 BROAD, SINGLE-WORD SEO tags to find video footage.
+                    OUTPUT: Return ONLY a JSON array of strings.
+                `;
+
+                const keywordResult = await callLLM({
+                    task: 'KEYWORDS',
+                    messages: [
+                        { role: 'system', content: 'You generate SEO keywords. Return ONLY valid JSON arrays.' },
+                        { role: 'user', content: keywordPrompt }
+                    ],
+                    temperature: 0.3,
+                    jsonMode: true
+                });
+
+                let keywords: string[] = [];
+                try {
+                    const parsed = JSON.parse(keywordResult);
+                    keywords = Array.isArray(parsed) ? parsed : (parsed.keywords || []);
+                } catch {
+                    keywords = [topic.split(' ')[0]];
+                }
+
+                // Search YouTube (simplified - using existing endpoint logic)
+                const apiKey = process.env.YOUTUBE_API_KEY;
+                const candidates: Array<{ id: string; title: string; channel: string; transcript?: string }> = [];
+
+                for (const keyword of keywords.slice(0, 3)) {
+                    try {
+                        const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&type=video&maxResults=3&key=${apiKey}`;
+                        const response = await fetch(searchUrl);
+                        if (response.ok) {
+                            const data = await response.json();
+                            for (const item of data.items || []) {
+                                candidates.push({
+                                    id: item.id.videoId,
+                                    title: item.snippet.title,
+                                    channel: item.snippet.channelTitle
+                                });
+                            }
+                        }
+                    } catch {
+                        // Continue with other keywords
+                    }
+                }
+
+                // Get transcripts for found videos
+                const videosWithTranscripts = [];
+                for (const video of candidates.slice(0, 5)) {
+                    try {
+                        const transcript = await getSmartTranscript(video.id);
+                        videosWithTranscripts.push({
+                            ...video,
+                            transcript: transcript || ''
+                        });
+                    } catch {
+                        videosWithTranscripts.push({ ...video, transcript: '' });
+                    }
+                }
+
+                return { videos: videosWithTranscripts, queries: keywords };
+            },
+            evaluate: stepEvaluators.videos,
+            retryStrategy: 'broader_query',
+            maxRetries: 2,
+            canSkip: true
+        });
+
+        // === STEP 3: REPORT ===
+        const reportResult = await orchestrator.runStep({
+            name: 'report',
+            execute: async () => {
+                const { callLLM } = await import('./lib/llmProvider');
+
+                const videos = videosResult.data?.videos || [];
+                const videosText = videos.length > 0
+                    ? videos.map((v: { title: string; channel: string; transcript?: string }, i: number) =>
+                        `[Video ${i + 1}] ${v.title} (${v.channel})\nTranscript: ${v.transcript || '(No transcript)'}`
+                    ).join("\n\n")
+                    : "No video intelligence available.";
+
+                const prompt = `
+                    SOURCE 1: NEWS SUMMARY
+                    ${newsResult.data.newsSummary || "No news summary available."}
+
+                    SOURCE 1.5: DEEP DIVE FINDINGS
+                    ${deepResult.data?.deepAnalysis || "No deep analysis available."}
+                    
+                    SOURCE 2: VIDEOS
+                    ${videosText}
+                    
+                    TASK: Write a Deep Dive Intelligence Report on ${topic}.
+                    Include a section: ## 🔗 SOURCES listing the news links provided.
+                    
+                    STRUCTURE:
+                    # [URGENT/CATCHY TITLE]
+                    ## 🔍 THE OFFICIAL NARRATIVE (News)
+                    ## 🕵️‍♂️ DEEP DIVE INSIGHTS (Hidden Details found in full text)
+                    ## 👁️ ON THE GROUND (Video Evidence)
+                    ## 📱 SOCIAL PULSE (What's Viral)
+                    ## 🧠 AGENT'S ANALYSIS (Hidden Truths)
+                    ## 🔗 SOURCES (List the Verified News Links provided in Source 1)
+                    
+                    Keep it markdown formatted.
+                `;
+
+                const finalReport = await callLLM({
+                    task: 'DEEP_ANALYSIS',
+                    messages: [
+                        { role: 'system', content: 'You are an investigative journalist writing intelligence reports.' },
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature: 0.4
+                });
+
+                const ideasPrompt = `Based on this report:\n${finalReport}\nGenerate 3 viral Instagram Reel ideas that visualize these hidden truths.`;
+                const ideas = await callLLM({
+                    task: 'SUMMARIZE',
+                    messages: [
+                        { role: 'system', content: 'You generate viral content ideas for social media.' },
+                        { role: 'user', content: ideasPrompt }
+                    ],
+                    temperature: 0.5
+                });
+
+                // Save to Firestore
+                const reportData = {
+                    summary: finalReport,
+                    ideas: ideas,
+                    status: 'completed',
+                    videoCount: videos.length,
+                    sources: newsResult.data.sources || [],
+                    videos: videos,
+                    queries: videosResult.data?.queries || []
+                };
+
+                await db.collection("reports").doc(reportId).update(reportData);
+
+                return { report_id: reportId, summary: finalReport, quality_check: { grade: 'B' } };
+            },
+            evaluate: stepEvaluators.report,
+            retryStrategy: 'none',
+            maxRetries: 1,
+            canSkip: false
+        });
+
+        await orchestrator.finalize(reportResult.success);
+
+        res.json({
+            success: true,
+            reportId,
+            logs: orchestrator.getHistory()
+        });
+
+    } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        await orchestrator.log('workflow', `Workflow failed: ${errorMsg}`, 'error');
+        await orchestrator.finalize(false);
+
+        res.status(500).json({
+            success: false,
+            error: errorMsg,
+            logs: orchestrator.getHistory()
+        });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
