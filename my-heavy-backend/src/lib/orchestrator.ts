@@ -15,6 +15,7 @@ import {
     getAIStrategyPrompt,
     getNextAlternativeFunction
 } from './retryStrategies';
+import { createSelfImprover, SelfImprover, ImprovementSuggestion } from './selfImprover';
 
 // ============ TYPES ============
 
@@ -66,6 +67,7 @@ export interface OrchestratorConfig {
     reportId: string;
     topic: string;
     enableAIDecisions?: boolean;
+    enableSelfImprovement?: boolean;
     verbose?: boolean;
 }
 
@@ -77,12 +79,19 @@ export class WorkflowOrchestrator {
     private enableAI: boolean;
     private verbose: boolean;
     private stepHistory: StepLog[] = [];
+    private selfImprover: SelfImprover | null = null;
+    private suggestions: ImprovementSuggestion[] = [];
 
     constructor(config: OrchestratorConfig) {
         this.reportId = config.reportId;
         this.topic = config.topic;
         this.enableAI = config.enableAIDecisions ?? true;
         this.verbose = config.verbose ?? true;
+
+        // Initialize self-improver if enabled
+        if (config.enableSelfImprovement ?? true) {
+            this.selfImprover = createSelfImprover(config.reportId);
+        }
     }
 
     // ============ LOGGING ============
@@ -368,8 +377,51 @@ Respond with JSON:
         return this.stepHistory;
     }
 
+    getSuggestions(): ImprovementSuggestion[] {
+        return this.suggestions;
+    }
+
+    // Called after each step to trigger self-improvement analysis
+    async analyzeStep(stepName: string, success: boolean, evaluation: StepEvaluation): Promise<void> {
+        if (!this.selfImprover) return;
+
+        // Record log to self-improver
+        this.stepHistory.forEach(log => this.selfImprover!.recordLog(log));
+
+        // Analyze and potentially generate suggestion
+        const suggestion = await this.selfImprover.onStepComplete(stepName, success, evaluation);
+
+        if (suggestion) {
+            this.suggestions.push(suggestion);
+            await this.log(stepName, `💡 AI Suggestion: ${suggestion.title}`, 'ai_decision', {
+                suggestionId: suggestion.id,
+                suggestionType: suggestion.suggestionType,
+                priority: suggestion.priority,
+                description: suggestion.description.substring(0, 200)
+            });
+        }
+    }
+
     async finalize(success: boolean): Promise<void> {
         await this.log('workflow', success ? 'Workflow completed successfully' : 'Workflow completed with issues', success ? 'success' : 'warning');
+
+        // Generate and log workflow summary if self-improver is enabled
+        if (this.selfImprover) {
+            const summary = await this.selfImprover.generateWorkflowSummary();
+            await this.log('self_improvement', `System Health: ${summary}`, 'info');
+
+            // Log all suggestions
+            if (this.suggestions.length > 0) {
+                await this.log('self_improvement', `Generated ${this.suggestions.length} improvement suggestion(s)`, 'ai_decision', {
+                    suggestions: this.suggestions.map(s => ({
+                        id: s.id,
+                        title: s.title,
+                        type: s.suggestionType,
+                        priority: s.priority
+                    }))
+                });
+            }
+        }
     }
 }
 
