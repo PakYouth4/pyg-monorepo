@@ -428,14 +428,16 @@ function DashboardContent() {
                 {/* Top Right Actions */}
                 <div className="w-full md:w-auto mt-8 md:mt-0 flex flex-col items-start md:items-end gap-2">
                     <div className="flex items-center gap-4">
-                        {/* AI Suggestions Button */}
-                        <button
-                            onClick={() => setIsSuggestionsOpen(true)}
-                            className="relative p-2 text-gray-400 hover:text-purple-400 transition-colors"
-                            title="AI Improvement Suggestions"
-                        >
-                            <Sparkles className="w-5 h-5" />
-                        </button>
+                        {/* AI Suggestions Button - Dev Mode Only */}
+                        {isDevMode && (
+                            <button
+                                onClick={() => setIsSuggestionsOpen(true)}
+                                className="relative p-2 text-gray-400 hover:text-purple-400 transition-colors"
+                                title="AI Improvement Suggestions"
+                            >
+                                <Sparkles className="w-5 h-5" />
+                            </button>
+                        )}
                         <NotificationBell />
                         <button
                             onClick={() => setIsModalOpen(true)}
