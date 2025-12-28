@@ -136,13 +136,24 @@ Output: ["Sudan civil war", "RSF Rapid Support Forces", "SAF Sudan Army", "Khart
         // Robust JSON parsing
         try {
             const parsed = JSON.parse(content);
-            if (Array.isArray(parsed)) return parsed;
-            if (parsed.keywords && Array.isArray(parsed.keywords)) return parsed.keywords;
-            // Iterate values
-            for (const key in parsed) {
-                if (Array.isArray(parsed[key])) return parsed[key];
+            let keywords: string[] = [];
+            if (Array.isArray(parsed)) keywords = parsed;
+            else if (parsed.keywords && Array.isArray(parsed.keywords)) keywords = parsed.keywords;
+            else {
+                // Iterate values to find array
+                for (const key in parsed) {
+                    if (Array.isArray(parsed[key])) {
+                        keywords = parsed[key];
+                        break;
+                    }
+                }
             }
-            return [];
+
+            // Log keywords for quality review
+            console.log(`[Keywords] Generated ${keywords.length} keywords for "${topic}":`);
+            keywords.forEach((kw, i) => console.log(`  ${i + 1}. ${kw}`));
+
+            return keywords;
         } catch (e) {
             console.warn("Groq JSON Parse Error:", e, content);
             // Fallback regex extract
