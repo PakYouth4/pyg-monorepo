@@ -38,7 +38,22 @@ export function useBackendStatus(pingInterval: number = 10000) { // Reduced from
 
             if (response.ok) {
                 const text = await response.text();
-                // Extract version from response like "Heavy Backend V5.0 (Multi-Provider LLM) Online 🚀"
+
+                // Check if this is actually our backend (not HF loading page)
+                // Our backend responds with "Heavy Backend V5.x ... Online 🚀"
+                if (!text.includes('Heavy Backend') || !text.includes('Online')) {
+                    // This is HF's loading/restart page, not our backend
+                    consecutiveFailures.current++;
+                    setStatus({
+                        status: 'loading',
+                        version: 'Restarting...',
+                        latency: null,
+                        lastChecked: new Date()
+                    });
+                    return;
+                }
+
+                // Extract version from response like "Heavy Backend V5.3 (Model Chain Dec-28) Online 🚀"
                 const versionMatch = text.match(/V[\d.]+\s*\([^)]+\)/);
                 const version = versionMatch ? versionMatch[0] : 'Online';
 
