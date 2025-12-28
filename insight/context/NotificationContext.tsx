@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, Timestamp, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 
@@ -30,6 +30,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const [notifications, setNotifications] = useState<ScanNotification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isInitialized, setIsInitialized] = useState(false);
+
+    // Store AbortControllers for each scan to enable cancellation
+    const abortControllers = useRef<Map<string, AbortController>>(new Map());
 
     // Load from LocalStorage on mount
     useEffect(() => {
@@ -173,6 +176,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         const update = (data: Partial<ScanNotification>) => updateNotification(scanId, data);
         const interval = simulateProgress(scanId);
 
+        // Create AbortController for this scan
+        const controller = new AbortController();
+        abortControllers.current.set(scanId, controller);
+
         try {
             console.log(`[Scan V3] Starting Orchestrated Workflow...`);
             update({ status: 'AI Orchestrator Initialized... 🤖', progress: 15 });
@@ -187,7 +194,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                     reportId,
                     isPublic: config.isPublic,
                     userId: config.userId
-                })
+                }),
+                signal: controller.signal  // Enable cancellation
             });
 
             clearInterval(interval);
@@ -220,6 +228,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         } catch (error) {
             clearInterval(interval);
 
+            // Check if this was a user-initiated cancellation
+            if (error instanceof Error && error.name === 'AbortError') {
+                console.log(`[Scan V3] Scan cancelled by user`);
+                abortControllers.current.delete(scanId);
+                return;  // Don't update - dismissNotification already handled it
+            }
+
             // Comprehensive error serialization
             let errorMessage = 'Unknown error';
             try {
@@ -246,6 +261,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 isComplete: true,
                 progress: 100
             });
+
+            // Clean up controller
+            abortControllers.current.delete(scanId);
         }
     };
 
@@ -463,7 +481,23 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
 
     const dismissNotification = (id: string) => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
+        // Abort any running HTTP request for this scan
+        const controller = abortControllers.current.get(id);
+        if (controller) {
+            console.log(`[Scan] Cancelling scan ${id}...`);
+            controller.abort();
+            abortControllers.current.delete(id);
+        }
+
+        // Update the notification to show it was cancelled, then remove after a moment
+        setNotifications(prev => prev.map(n =>
+            n.id === id ? { ...n, status: 'Cancelled', isComplete: true, error: 'Cancelled by user' } : n
+        ));
+
+        // Remove after short delay so user sees the cancellation
+        setTimeout(() => {
+            setNotifications(prev => prev.filter(n => n.id !== id));
+        }, 1500);
     };
 
     const markAllAsRead = () => {
