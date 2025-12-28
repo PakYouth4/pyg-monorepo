@@ -1284,14 +1284,17 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
         // Save complete report to Firestore
         await db.collection('reports').doc(reportId).update({
             status: 'completed',
-            // Report content
+            // Fields the frontend expects
+            summary: reportData?.formatted_report || '',  // Main report content
+            ideas: reportData?.data?.content_ideas ?
+                reportData.data.content_ideas.map((idea: any) =>
+                    `**${idea.platform}**: ${idea.hook}\n${idea.script}\n`
+                ).join('\n---\n') : '',  // Content ideas formatted
+            // Additional data
             report_id: reportData?.report_id,
-            formatted_report: reportData?.formatted_report,
             quality_check: reportData?.quality_check,
-            data: reportData?.data,
-            audit_log: reportData?.audit_log,
+            sources: reportData?.data?.sources,
             generated_at: reportData?.generated_at,
-            // Additional metadata
             completedAt: new Date().toISOString()
         });
 
