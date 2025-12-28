@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +11,7 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             background: #0f0f0f;
@@ -18,12 +19,12 @@
             min-height: 100vh;
             padding: 20px;
         }
-        
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
-        
+
         /* Header */
         .header {
             display: flex;
@@ -33,16 +34,18 @@
             padding-bottom: 16px;
             border-bottom: 1px solid #333;
         }
-        
+
         .header h1 {
             font-size: 24px;
             display: flex;
             align-items: center;
             gap: 10px;
         }
-        
-        .header h1 span { font-size: 28px; }
-        
+
+        .header h1 span {
+            font-size: 28px;
+        }
+
         .version-badge {
             background: #1a472a;
             color: #4ade80;
@@ -51,7 +54,7 @@
             font-size: 12px;
             font-weight: 600;
         }
-        
+
         /* Status bar */
         .status-bar {
             display: flex;
@@ -62,30 +65,41 @@
             border-radius: 8px;
             border: 1px solid #333;
         }
-        
+
         .status-item {
             display: flex;
             flex-direction: column;
             gap: 4px;
         }
-        
+
         .status-label {
             font-size: 11px;
             text-transform: uppercase;
             color: #888;
             letter-spacing: 1px;
         }
-        
+
         .status-value {
             font-size: 16px;
             font-weight: 600;
         }
-        
-        .status-running { color: #fbbf24; }
-        .status-completed { color: #4ade80; }
-        .status-failed { color: #f87171; }
-        .status-idle { color: #888; }
-        
+
+        .status-running {
+            color: #fbbf24;
+        }
+
+        .status-completed {
+            color: #4ade80;
+        }
+
+        .status-failed {
+            color: #f87171;
+        }
+
+        .status-idle {
+            color: #888;
+        }
+
         /* Summary cards */
         .summary-cards {
             display: grid;
@@ -93,7 +107,7 @@
             gap: 12px;
             margin-bottom: 24px;
         }
-        
+
         .summary-card {
             background: #1a1a1a;
             padding: 16px;
@@ -101,27 +115,27 @@
             border: 1px solid #333;
             text-align: center;
         }
-        
+
         .summary-card .value {
             font-size: 28px;
             font-weight: 700;
             color: #fff;
         }
-        
+
         .summary-card .label {
             font-size: 11px;
             text-transform: uppercase;
             color: #888;
             margin-top: 4px;
         }
-        
+
         /* Steps container */
         .steps-container {
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
-        
+
         /* Step card */
         .step-card {
             background: #1a1a1a;
@@ -129,7 +143,7 @@
             border-radius: 8px;
             overflow: hidden;
         }
-        
+
         .step-header {
             display: flex;
             justify-content: space-between;
@@ -138,17 +152,17 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        
+
         .step-header:hover {
             background: #252525;
         }
-        
+
         .step-title {
             display: flex;
             align-items: center;
             gap: 12px;
         }
-        
+
         .step-number {
             width: 28px;
             height: 28px;
@@ -159,18 +173,37 @@
             font-size: 12px;
             font-weight: 700;
         }
-        
-        .step-pending .step-number { background: #333; color: #888; }
-        .step-running .step-number { background: #854d0e; color: #fbbf24; }
-        .step-success .step-number { background: #166534; color: #4ade80; }
-        .step-failed .step-number { background: #991b1b; color: #f87171; }
-        .step-skipped .step-number { background: #1e3a5f; color: #60a5fa; }
-        
+
+        .step-pending .step-number {
+            background: #333;
+            color: #888;
+        }
+
+        .step-running .step-number {
+            background: #854d0e;
+            color: #fbbf24;
+        }
+
+        .step-success .step-number {
+            background: #166534;
+            color: #4ade80;
+        }
+
+        .step-failed .step-number {
+            background: #991b1b;
+            color: #f87171;
+        }
+
+        .step-skipped .step-number {
+            background: #1e3a5f;
+            color: #60a5fa;
+        }
+
         .step-name {
             font-weight: 600;
             font-size: 14px;
         }
-        
+
         .step-meta {
             display: flex;
             align-items: center;
@@ -178,12 +211,12 @@
             font-size: 12px;
             color: #888;
         }
-        
+
         .step-duration {
             font-family: monospace;
             color: #a78bfa;
         }
-        
+
         .step-status-badge {
             padding: 4px 8px;
             border-radius: 4px;
@@ -191,13 +224,32 @@
             font-weight: 600;
             text-transform: uppercase;
         }
-        
-        .step-pending .step-status-badge { background: #333; color: #888; }
-        .step-running .step-status-badge { background: #854d0e; color: #fbbf24; }
-        .step-success .step-status-badge { background: #166534; color: #4ade80; }
-        .step-failed .step-status-badge { background: #991b1b; color: #f87171; }
-        .step-skipped .step-status-badge { background: #1e3a5f; color: #60a5fa; }
-        
+
+        .step-pending .step-status-badge {
+            background: #333;
+            color: #888;
+        }
+
+        .step-running .step-status-badge {
+            background: #854d0e;
+            color: #fbbf24;
+        }
+
+        .step-success .step-status-badge {
+            background: #166534;
+            color: #4ade80;
+        }
+
+        .step-failed .step-status-badge {
+            background: #991b1b;
+            color: #f87171;
+        }
+
+        .step-skipped .step-status-badge {
+            background: #1e3a5f;
+            color: #60a5fa;
+        }
+
         /* Step details (expandable) */
         .step-details {
             display: none;
@@ -205,20 +257,20 @@
             border-top: 1px solid #333;
             background: #151515;
         }
-        
+
         .step-card.expanded .step-details {
             display: block;
         }
-        
+
         /* Section within details */
         .detail-section {
             margin-bottom: 16px;
         }
-        
+
         .detail-section:last-child {
             margin-bottom: 0;
         }
-        
+
         .detail-section-header {
             display: flex;
             align-items: center;
@@ -229,23 +281,23 @@
             margin-bottom: 8px;
             cursor: pointer;
         }
-        
+
         .detail-section-header:hover {
             color: #aaa;
         }
-        
+
         .chevron {
             transition: transform 0.2s;
         }
-        
+
         .detail-section.collapsed .chevron {
             transform: rotate(-90deg);
         }
-        
+
         .detail-section.collapsed .detail-content {
             display: none;
         }
-        
+
         /* Model attempts */
         .model-attempt {
             display: flex;
@@ -257,37 +309,37 @@
             margin-bottom: 6px;
             font-size: 13px;
         }
-        
+
         .model-attempt:last-child {
             margin-bottom: 0;
         }
-        
+
         .model-status {
             font-size: 16px;
         }
-        
+
         .model-name {
             font-family: monospace;
             color: #60a5fa;
         }
-        
+
         .model-provider {
             color: #888;
             font-size: 11px;
         }
-        
+
         .model-tokens {
             margin-left: auto;
             color: #888;
             font-size: 11px;
         }
-        
+
         .model-duration {
             color: #a78bfa;
             font-family: monospace;
             font-size: 11px;
         }
-        
+
         .model-error {
             color: #f87171;
             font-size: 12px;
@@ -298,7 +350,7 @@
             font-family: monospace;
             word-break: break-all;
         }
-        
+
         /* Input/Output preview */
         .io-preview {
             background: #1a1a1a;
@@ -312,13 +364,13 @@
             white-space: pre-wrap;
             word-break: break-all;
         }
-        
+
         .io-size {
             font-size: 11px;
             color: #666;
             margin-top: 4px;
         }
-        
+
         /* Error display */
         .error-display {
             background: #2a1515;
@@ -327,12 +379,12 @@
             border-radius: 6px;
             color: #f87171;
         }
-        
+
         .error-message {
             font-weight: 600;
             margin-bottom: 8px;
         }
-        
+
         .error-stack {
             font-family: monospace;
             font-size: 11px;
@@ -340,7 +392,7 @@
             max-height: 150px;
             overflow: auto;
         }
-        
+
         /* Refresh indicator */
         .refresh-indicator {
             position: fixed;
@@ -353,43 +405,44 @@
             color: #888;
             border: 1px solid #333;
         }
-        
+
         .refresh-indicator.refreshing {
             color: #fbbf24;
         }
-        
+
         /* No pipeline message */
         .no-pipeline {
             text-align: center;
             padding: 80px 20px;
             color: #888;
         }
-        
+
         .no-pipeline h2 {
             font-size: 24px;
             margin-bottom: 8px;
             color: #666;
         }
-        
+
         .no-pipeline p {
             font-size: 14px;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
             <h1><span>🔬</span> Pipeline Monitor</h1>
             <div class="version-badge" id="version">Loading...</div>
         </div>
-        
+
         <div id="content">
             <div class="no-pipeline">
                 <h2>No Pipeline Running</h2>
                 <p>Start a research scan to see live pipeline status</p>
             </div>
         </div>
-        
+
         <div class="refresh-indicator" id="refresh-indicator">
             Auto-refresh: 2s
         </div>
@@ -398,18 +451,19 @@
     <script>
         let expandedSteps = new Set();
         let collapsedSections = new Set();
-        
+
         async function fetchPipelineStatus() {
             try {
                 document.getElementById('refresh-indicator').classList.add('refreshing');
                 document.getElementById('refresh-indicator').textContent = 'Refreshing...';
-                
-                const response = await fetch('/pipeline-status');
+
+                // Use lite endpoint for efficient polling
+                const response = await fetch('/pipeline-status/lite');
                 const data = await response.json();
-                
+
                 document.getElementById('refresh-indicator').classList.remove('refreshing');
                 document.getElementById('refresh-indicator').textContent = 'Auto-refresh: 2s';
-                
+
                 if (data.status === 'idle') {
                     renderNoData();
                 } else {
@@ -420,7 +474,7 @@
                 document.getElementById('refresh-indicator').textContent = 'Error: ' + error.message;
             }
         }
-        
+
         function renderNoData() {
             document.getElementById('content').innerHTML = `
                 <div class="no-pipeline">
@@ -429,13 +483,13 @@
                 </div>
             `;
         }
-        
+
         function renderPipeline(data) {
             const statusClass = `status-${data.status}`;
-            const duration = data.summary?.totalDuration 
+            const duration = data.summary?.totalDuration
                 ? (data.summary.totalDuration / 1000).toFixed(1) + 's'
                 : 'Running...';
-            
+
             let html = `
                 <div class="status-bar">
                     <div class="status-item">
@@ -483,56 +537,77 @@
                     ${data.steps.map(step => renderStep(step)).join('')}
                 </div>
             `;
-            
+
             document.getElementById('content').innerHTML = html;
-            
-            // Reattach click handlers
+
+            // Reattach click handlers for expanding steps
             document.querySelectorAll('.step-header').forEach(header => {
-                header.addEventListener('click', () => {
+                header.addEventListener('click', async () => {
                     const card = header.closest('.step-card');
                     const stepId = card.dataset.stepId;
-                    card.classList.toggle('expanded');
+                    const detailsDiv = card.querySelector('.step-details');
+
                     if (card.classList.contains('expanded')) {
-                        expandedSteps.add(stepId);
-                    } else {
+                        card.classList.remove('expanded');
                         expandedSteps.delete(stepId);
+                    } else {
+                        // Fetch full step details on expand
+                        detailsDiv.innerHTML = '<div style="color:#888;padding:12px;">Loading details...</div>';
+                        card.classList.add('expanded');
+                        expandedSteps.add(stepId);
+
+                        try {
+                            const response = await fetch(`/pipeline-status/step/${stepId}`);
+                            if (response.ok) {
+                                const fullStep = await response.json();
+                                detailsDiv.innerHTML = renderStepDetails(fullStep);
+                            } else {
+                                detailsDiv.innerHTML = '<div style="color:#666;padding:12px;">Details not available</div>';
+                            }
+                        } catch (e) {
+                            detailsDiv.innerHTML = '<div style="color:#f87171;padding:12px;">Failed to load details</div>';
+                        }
                     }
                 });
             });
-            
-            // Restore expanded state
+
+            // Restore expanded state (just visually, details fetched on click)
             expandedSteps.forEach(stepId => {
                 const card = document.querySelector(`[data-step-id="${stepId}"]`);
                 if (card) card.classList.add('expanded');
             });
         }
-        
+
         function renderStep(step) {
             const isExpanded = expandedSteps.has(step.id);
             const durationStr = step.duration ? `${step.duration}ms` : '';
-            
+            // Use modelAttemptCount from lite response
+            const attemptCount = step.modelAttemptCount || step.modelAttempts?.length || 0;
+
             return `
                 <div class="step-card step-${step.status} ${isExpanded ? 'expanded' : ''}" data-step-id="${step.id}">
                     <div class="step-header">
                         <div class="step-title">
                             <div class="step-number">${step.order}</div>
                             <div class="step-name">${escapeHtml(step.name)}</div>
+                            ${attemptCount > 0 ? `<span style="color:#888;font-size:11px;">(${attemptCount} attempts)</span>` : ''}
                         </div>
                         <div class="step-meta">
                             ${durationStr ? `<span class="step-duration">${durationStr}</span>` : ''}
+                            ${step.hasError ? '<span style="color:#f87171;margin-right:8px;">⚠️</span>' : ''}
                             <span class="step-status-badge">${step.status}</span>
                         </div>
                     </div>
                     <div class="step-details">
-                        ${renderStepDetails(step)}
+                        <div style="color:#888;padding:12px;">Click to load details...</div>
                     </div>
                 </div>
             `;
         }
-        
+
         function renderStepDetails(step) {
             let html = '';
-            
+
             // Model attempts
             if (step.modelAttempts && step.modelAttempts.length > 0) {
                 html += `
@@ -547,7 +622,7 @@
                     </div>
                 `;
             }
-            
+
             // Input
             if (step.input) {
                 html += `
@@ -562,7 +637,7 @@
                     </div>
                 `;
             }
-            
+
             // Output
             if (step.output) {
                 html += `
@@ -577,7 +652,7 @@
                     </div>
                 `;
             }
-            
+
             // Error
             if (step.error) {
                 html += `
@@ -595,7 +670,7 @@
                     </div>
                 `;
             }
-            
+
             // Meta
             if (step.meta && Object.keys(step.meta).length > 0) {
                 html += `
@@ -610,16 +685,16 @@
                     </div>
                 `;
             }
-            
+
             return html || '<div style="color:#666;padding:12px;">No details available</div>';
         }
-        
+
         function renderModelAttempt(attempt) {
             const statusIcon = attempt.status === 'success' ? '✅' : '❌';
-            const tokens = attempt.tokensIn && attempt.tokensOut 
+            const tokens = attempt.tokensIn && attempt.tokensOut
                 ? `${attempt.tokensIn}/${attempt.tokensOut} tokens`
                 : '';
-            
+
             let html = `
                 <div class="model-attempt">
                     <span class="model-status">${statusIcon}</span>
@@ -629,7 +704,7 @@
                     <span class="model-duration">${attempt.duration}ms</span>
                 </div>
             `;
-            
+
             if (attempt.error) {
                 html += `
                     <div class="model-error">
@@ -637,17 +712,17 @@
                     </div>
                 `;
             }
-            
+
             return html;
         }
-        
+
         function escapeHtml(str) {
             if (!str) return '';
             const div = document.createElement('div');
             div.textContent = str;
             return div.innerHTML;
         }
-        
+
         // Check version
         async function checkVersion() {
             try {
@@ -659,13 +734,14 @@
                 document.getElementById('version').textContent = 'Offline';
             }
         }
-        
+
         // Initial load
         checkVersion();
         fetchPipelineStatus();
-        
+
         // Auto-refresh every 2 seconds
         setInterval(fetchPipelineStatus, 2000);
     </script>
 </body>
+
 </html>

@@ -1199,90 +1199,154 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
         // ==========================================
 
         // Step 1: Keywords
-        const step1 = await orchestrator.runStep({
-            name: 'step1_keywords',
-            execute: async () => callEndpoint('/v2/step1-keywords', { topic }),
-            evaluate: genericEvaluator,
-            retryStrategy: 'broader_query',
-            canSkip: false
-        });
-        const keywords = step1.data.keywords;
+        const step1Result = await runLoggedStep(
+            { name: 'Keywords Generation', order: 1 },
+            { topic },
+            async () => {
+                const step1 = await orchestrator.runStep({
+                    name: 'step1_keywords',
+                    execute: async () => callEndpoint('/v2/step1-keywords', { topic }),
+                    evaluate: genericEvaluator,
+                    retryStrategy: 'broader_query',
+                    canSkip: false
+                });
+                return step1.data;
+            },
+            { stepKey: 'step1_keywords' }
+        );
+        const keywords = step1Result?.keywords || [];
 
         // Step 2: Search
-        const step2 = await orchestrator.runStep({
-            name: 'step2_search',
-            execute: async () => callEndpoint('/v2/step2-search', { keywords }),
-            evaluate: genericEvaluator,
-            retryStrategy: 'broader_query',
-            canSkip: false
-        });
-        const searchResults = step2.data.results;
+        const step2Result = await runLoggedStep(
+            { name: 'Tavily Search', order: 2 },
+            { keywords },
+            async () => {
+                const step2 = await orchestrator.runStep({
+                    name: 'step2_search',
+                    execute: async () => callEndpoint('/v2/step2-search', { keywords }),
+                    evaluate: genericEvaluator,
+                    retryStrategy: 'broader_query',
+                    canSkip: false
+                });
+                return step2.data;
+            },
+            { stepKey: 'step2_search', keywordCount: keywords.length }
+        );
+        const searchResults = step2Result?.results || [];
 
         // Step 3: Scrape
         const urls = searchResults.slice(0, 5).map((r: any) => r.url);
-        const step3 = await orchestrator.runStep({
-            name: 'step3_scrape',
-            execute: async () => callEndpoint('/v2/step3-scrape', { urls }),
-            evaluate: genericEvaluator,
-            retryStrategy: 'skip',
-            canSkip: true
-        });
-        const scrapeResults = step3.data?.results || [];
+        const step3Result = await runLoggedStep(
+            { name: 'Article Scraping', order: 3 },
+            { urls },
+            async () => {
+                const step3 = await orchestrator.runStep({
+                    name: 'step3_scrape',
+                    execute: async () => callEndpoint('/v2/step3-scrape', { urls }),
+                    evaluate: genericEvaluator,
+                    retryStrategy: 'skip',
+                    canSkip: true
+                });
+                return step3.data;
+            },
+            { stepKey: 'step3_scrape', urlCount: urls.length }
+        );
+        const scrapeResults = step3Result?.results || [];
 
         // Step 4: Structure
         const articlesToStructure = scrapeResults
             .filter((r: any) => r.markdown && r.markdown.length > 500)
             .map((r: any) => ({ markdown: r.markdown, url: r.metadata?.sourceURL || r.url }));
 
-        const step4 = await orchestrator.runStep({
-            name: 'step4_structure',
-            execute: async () => callEndpoint('/v2/step4-structure', { articles: articlesToStructure }),
-            evaluate: genericEvaluator,
-            canSkip: true
-        });
-        const structuredArticles = step4.data?.articles || [];
+        const step4Result = await runLoggedStep(
+            { name: 'Content Structuring', order: 4 },
+            { articleCount: articlesToStructure.length },
+            async () => {
+                const step4 = await orchestrator.runStep({
+                    name: 'step4_structure',
+                    execute: async () => callEndpoint('/v2/step4-structure', { articles: articlesToStructure }),
+                    evaluate: genericEvaluator,
+                    canSkip: true
+                });
+                return step4.data;
+            },
+            { stepKey: 'step4_structure' }
+        );
+        const structuredArticles = step4Result?.articles || [];
 
         // Step 5: Summarize
-        const step5 = await orchestrator.runStep({
-            name: 'step5_summarize',
-            execute: async () => callEndpoint('/v2/step5-summarize', { articles: structuredArticles }),
-            evaluate: genericEvaluator,
-            canSkip: true
-        });
-        const summarizedArticles = step5.data?.articles || [];
+        const step5Result = await runLoggedStep(
+            { name: 'Article Summarization', order: 5 },
+            { articleCount: structuredArticles.length },
+            async () => {
+                const step5 = await orchestrator.runStep({
+                    name: 'step5_summarize',
+                    execute: async () => callEndpoint('/v2/step5-summarize', { articles: structuredArticles }),
+                    evaluate: genericEvaluator,
+                    canSkip: true
+                });
+                return step5.data;
+            },
+            { stepKey: 'step5_summarize' }
+        );
+        const summarizedArticles = step5Result?.articles || [];
 
         // ==========================================
         // PHASE 2: VIDEO INTELLIGENCE (Steps 6-8)
         // ==========================================
 
         // Step 6: Queries
-        const step6 = await orchestrator.runStep({
-            name: 'step6_queries',
-            execute: async () => callEndpoint('/v2/step6-queries', { topic, articles: summarizedArticles }),
-            evaluate: genericEvaluator,
-            canSkip: true
-        });
-        const videoQueries = step6.data?.queries || [topic];
+        const step6Result = await runLoggedStep(
+            { name: 'Video Query Generation', order: 6 },
+            { topic, articleCount: summarizedArticles.length },
+            async () => {
+                const step6 = await orchestrator.runStep({
+                    name: 'step6_queries',
+                    execute: async () => callEndpoint('/v2/step6-queries', { topic, articles: summarizedArticles }),
+                    evaluate: genericEvaluator,
+                    canSkip: true
+                });
+                return step6.data;
+            },
+            { stepKey: 'step6_queries' }
+        );
+        const videoQueries = step6Result?.queries || [topic];
 
         // Step 7: Videos
-        const step7 = await orchestrator.runStep({
-            name: 'step7_videos',
-            execute: async () => callEndpoint('/v2/step7-videos', { queries: videoQueries }),
-            evaluate: genericEvaluator,
-            retryStrategy: 'broader_query',
-            canSkip: true
-        });
-        const videos = step7.data?.videos || [];
+        const step7Result = await runLoggedStep(
+            { name: 'YouTube Search', order: 7 },
+            { queries: videoQueries },
+            async () => {
+                const step7 = await orchestrator.runStep({
+                    name: 'step7_videos',
+                    execute: async () => callEndpoint('/v2/step7-videos', { queries: videoQueries }),
+                    evaluate: genericEvaluator,
+                    retryStrategy: 'broader_query',
+                    canSkip: true
+                });
+                return step7.data;
+            },
+            { stepKey: 'step7_videos' }
+        );
+        const videos = step7Result?.videos || [];
 
         // Step 8: Transcribe
         // We only transcribe top 3 to save time/cost
-        const step8 = await orchestrator.runStep({
-            name: 'step8_transcribe',
-            execute: async () => callEndpoint('/v2/step8-transcribe', { videos: videos.slice(0, 3) }),
-            evaluate: genericEvaluator,
-            canSkip: true
-        });
-        const transcribedVideos = step8.data?.videos || videos.slice(0, 3);
+        const step8Result = await runLoggedStep(
+            { name: 'Video Transcription', order: 8 },
+            { videoCount: Math.min(videos.length, 3) },
+            async () => {
+                const step8 = await orchestrator.runStep({
+                    name: 'step8_transcribe',
+                    execute: async () => callEndpoint('/v2/step8-transcribe', { videos: videos.slice(0, 3) }),
+                    evaluate: genericEvaluator,
+                    canSkip: true
+                });
+                return step8.data;
+            },
+            { stepKey: 'step8_transcribe' }
+        );
+        const transcribedVideos = step8Result?.videos || videos.slice(0, 3);
 
         // ==========================================
         // PHASE 3: ANALYSIS & MERGE (Steps 9-10)
@@ -1292,34 +1356,46 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
         // detailed steps 9-verify and 9-classify skipped for speed, going straight to merge which is stronger
 
         // Step 9: Merge
-        const step9 = await orchestrator.runStep({
-            name: 'step9_merge',
-            evaluate: genericEvaluator,
-            execute: async () => callEndpoint('/v2/step9-merge', {
-                topic,
-                articles: summarizedArticles,
-                videos: transcribedVideos,
-                enrich: true
-            }),
-            canSkip: false // Critical step
-        });
-        const mergedSources = step9.data.sources;
+        const step9Result = await runLoggedStep(
+            { name: 'Knowledge Base Merge', order: 9 },
+            { topic, articleCount: summarizedArticles.length, videoCount: transcribedVideos.length },
+            async () => {
+                const step9 = await orchestrator.runStep({
+                    name: 'step9_merge',
+                    evaluate: genericEvaluator,
+                    execute: async () => callEndpoint('/v2/step9-merge', {
+                        topic,
+                        articles: summarizedArticles,
+                        videos: transcribedVideos,
+                        enrich: true
+                    }),
+                    canSkip: false // Critical step
+                });
+                return step9.data;
+            },
+            { stepKey: 'step9_merge' }
+        );
+        const mergedSources = step9Result?.sources || [];
 
         // Step 10: Normalize
-        const step10 = await orchestrator.runStep({
-            name: 'step10_normalize',
-            evaluate: genericEvaluator,
-            execute: async () => callEndpoint('/v2/step10-normalize', {
-                topic,
-                articles: [], // iterate if needed, but merge usually handles it
-                videos: []
-                // Note: The normalize endpoint might expect raw arrays if merge didn't happen, 
-                // but since we merged, we might want to skip or pass merged. 
-                // Let's assume merge output is sufficient for analysis.
-                // Actually, let's skip explicit normalize endpoint if merge provided clean sources.
-            }),
-            canSkip: true
-        });
+        const step10Result = await runLoggedStep(
+            { name: 'Source Normalization', order: 10 },
+            { sourceCount: mergedSources.length },
+            async () => {
+                const step10 = await orchestrator.runStep({
+                    name: 'step10_normalize',
+                    evaluate: genericEvaluator,
+                    execute: async () => callEndpoint('/v2/step10-normalize', {
+                        topic,
+                        articles: [],
+                        videos: []
+                    }),
+                    canSkip: true
+                });
+                return step10.data;
+            },
+            { stepKey: 'step10_normalize' }
+        );
         // We'll use mergedSources as the source of truth for analysis
 
         // ==========================================
@@ -1327,42 +1403,66 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
         // ==========================================
 
         // Step 11: Deep Analysis
-        const step11 = await orchestrator.runStep({
-            name: 'step11_analyze',
-            evaluate: genericEvaluator,
-            execute: async () => callEndpoint('/v2/step11-analyze', { topic, sources: mergedSources }),
-            canSkip: false
-        });
-        const analysis = step11.data;
+        const step11Result = await runLoggedStep(
+            { name: 'Deep Analysis', order: 11 },
+            { topic, sourceCount: mergedSources.length },
+            async () => {
+                const step11 = await orchestrator.runStep({
+                    name: 'step11_analyze',
+                    evaluate: genericEvaluator,
+                    execute: async () => callEndpoint('/v2/step11-analyze', { topic, sources: mergedSources }),
+                    canSkip: false
+                });
+                return step11.data;
+            },
+            { stepKey: 'step11_analyze' }
+        );
+        const analysis = step11Result || {};
 
         // Step 12: Content Ideas
-        const step12 = await orchestrator.runStep({
-            name: 'step12_content',
-            evaluate: genericEvaluator,
-            execute: async () => callEndpoint('/v2/step12-content', { analysis }),
-            canSkip: true
-        });
-        const contentIdeas = step12.data;
+        const step12Result = await runLoggedStep(
+            { name: 'Content Ideas', order: 12 },
+            { hasAnalysis: !!analysis.executive_summary },
+            async () => {
+                const step12 = await orchestrator.runStep({
+                    name: 'step12_content',
+                    evaluate: genericEvaluator,
+                    execute: async () => callEndpoint('/v2/step12-content', { analysis }),
+                    canSkip: true
+                });
+                return step12.data;
+            },
+            { stepKey: 'step12_content' }
+        );
+        const contentIdeas = step12Result || {};
 
         // Step 13: Final Report
-        const step13 = await orchestrator.runStep({
-            name: 'step13_report',
-            evaluate: (data: any) => {
-                if (!data?.report_id && !data?.id) return { quality: 'error' as const, issue: 'No report ID returned' };
-                return { quality: 'good' as const, metrics: { reportId: data.report_id } };
+        const step13Result = await runLoggedStep(
+            { name: 'Report Assembly', order: 13 },
+            { topic, sourceCount: mergedSources.length },
+            async () => {
+                const step13 = await orchestrator.runStep({
+                    name: 'step13_report',
+                    evaluate: (data: any) => {
+                        if (!data?.report_id && !data?.id) return { quality: 'error' as const, issue: 'No report ID returned' };
+                        return { quality: 'good' as const, metrics: { reportId: data.report_id } };
+                    },
+                    execute: async () => callEndpoint('/v2/step13-report', {
+                        topic,
+                        sources: mergedSources,
+                        deep_analysis: analysis,
+                        content_ideas: contentIdeas,
+                        executive_summary: analysis.executive_summary
+                    }),
+                    canSkip: false
+                });
+                return step13.data;
             },
-            execute: async () => callEndpoint('/v2/step13-report', {
-                topic,
-                sources: mergedSources,
-                deep_analysis: analysis,
-                content_ideas: contentIdeas,
-                executive_summary: analysis.executive_summary
-            }),
-            canSkip: false
-        });
+            { stepKey: 'step13_report' }
+        );
 
         // Get the report data from step13
-        const reportData = step13.data;
+        const reportData = step13Result || {};
 
         await orchestrator.log('workflow', 'V2 Pipeline Completed Successfully', 'success');
         await orchestrator.finalize(true);

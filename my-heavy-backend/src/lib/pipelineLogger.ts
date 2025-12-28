@@ -218,6 +218,23 @@ const MAX_PREVIEW_LENGTH = 500;
 const MAX_RAW_ERROR_LENGTH = 1000;
 const MAX_FULL_DATA_SIZE = 50000;  // 50KB limit for storing full data
 
+// API key patterns to redact from logs (prevent credential leaks)
+const SENSITIVE_PATTERNS = [
+    /sk-[a-zA-Z0-9]{20,}/g,         // OpenAI keys
+    /gsk_[a-zA-Z0-9]{20,}/g,        // Groq keys
+    /AIza[a-zA-Z0-9_-]{35}/g,       // Google API keys
+    /[a-zA-Z0-9]{32,}/g,            // Generic long tokens (be careful)
+];
+
+function redactSensitiveData(str: string): string {
+    let result = str;
+    // Only redact obvious API key patterns, not all long strings
+    result = result.replace(/sk-[a-zA-Z0-9]{20,}/g, '[OPENAI_KEY]');
+    result = result.replace(/gsk_[a-zA-Z0-9]{20,}/g, '[GROQ_KEY]');
+    result = result.replace(/or-[a-zA-Z0-9]{20,}/g, '[OPENROUTER_KEY]');
+    return result;
+}
+
 export class PipelineLogger {
     private runId: string;
     private topic: string;
@@ -468,6 +485,7 @@ export class PipelineLogger {
 
     /**
      * Prevent memory overflow by truncating large data
+     * Also redacts API keys from previews
      */
     private sanitizeData(data: any): DataSnapshot {
         if (data === null || data === undefined) {
@@ -483,9 +501,12 @@ export class PipelineLogger {
 
         const size = str.length;
         const isTruncated = size > MAX_PREVIEW_LENGTH;
-        const preview = isTruncated
+        let preview = isTruncated
             ? str.slice(0, MAX_PREVIEW_LENGTH) + '... [Truncated]'
             : str;
+
+        // Redact any API keys from preview
+        preview = redactSensitiveData(preview);
 
         const snapshot: DataSnapshot = {
             preview,
