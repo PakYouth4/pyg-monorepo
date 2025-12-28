@@ -393,21 +393,46 @@
             overflow: auto;
         }
 
-        /* Refresh indicator */
+        /* Refresh indicator - subtle pulsing dot */
         .refresh-indicator {
             position: fixed;
             bottom: 20px;
             right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
             background: #1a1a1a;
-            padding: 8px 16px;
+            padding: 8px 14px;
             border-radius: 20px;
-            font-size: 12px;
-            color: #888;
+            font-size: 11px;
+            color: #666;
             border: 1px solid #333;
         }
 
-        .refresh-indicator.refreshing {
-            color: #fbbf24;
+        .refresh-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+        }
+
+        .refresh-indicator.refreshing .refresh-dot {
+            animation: pulse 0.8s ease-in-out infinite;
+            background: #fbbf24;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.4;
+                transform: scale(0.9);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.1);
+            }
         }
 
         /* No pipeline message */
@@ -444,7 +469,8 @@
         </div>
 
         <div class="refresh-indicator" id="refresh-indicator">
-            Auto-refresh: 2s
+            <span class="refresh-dot"></span>
+            <span>Live</span>
         </div>
     </div>
 
@@ -453,16 +479,15 @@
         let collapsedSections = new Set();
 
         async function fetchPipelineStatus() {
+            const indicator = document.getElementById('refresh-indicator');
             try {
-                document.getElementById('refresh-indicator').classList.add('refreshing');
-                document.getElementById('refresh-indicator').textContent = 'Refreshing...';
+                indicator.classList.add('refreshing');
 
                 // Use lite endpoint for efficient polling
                 const response = await fetch('/pipeline-status/lite');
                 const data = await response.json();
 
-                document.getElementById('refresh-indicator').classList.remove('refreshing');
-                document.getElementById('refresh-indicator').textContent = 'Auto-refresh: 2s';
+                indicator.classList.remove('refreshing');
 
                 if (data.status === 'idle') {
                     renderNoData();
@@ -471,7 +496,7 @@
                 }
             } catch (error) {
                 console.error('Failed to fetch pipeline status:', error);
-                document.getElementById('refresh-indicator').textContent = 'Error: ' + error.message;
+                indicator.classList.remove('refreshing');
             }
         }
 

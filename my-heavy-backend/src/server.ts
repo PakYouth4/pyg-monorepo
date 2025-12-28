@@ -23,7 +23,7 @@ import { runDeepAnalysis } from './lib/groqDeepAnalysis';
 import { generateContentIdeas } from './lib/groqContentIdeas';
 import { assembleReport } from './lib/reportAssembler';
 import { runPreflightChecks } from './lib/utils';
-import { getCurrentPipelineLogger } from './lib/pipelineLogger';
+import { getCurrentPipelineLogger, createPipelineLogger, clearPipelineLogger } from './lib/pipelineLogger';
 
 import path from 'path';
 
@@ -1136,11 +1136,10 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
         return res.status(400).json({ error: 'Topic and reportId are required' });
     }
 
-    // Import orchestrator and pipeline logger
+    // Import orchestrator
     const { createOrchestrator } = await import('./lib/orchestrator');
-    const { createPipelineLogger, clearPipelineLogger } = await import('./lib/pipelineLogger');
 
-    // Create pipeline logger for this run
+    // Create pipeline logger for this run (uses static import for singleton consistency)
     const pipelineLogger = createPipelineLogger(reportId, topic);
 
     const orchestrator = createOrchestrator({
