@@ -44,19 +44,53 @@ app.get('/', (req, res) => {
 });
 
 // --- PIPELINE STATUS ENDPOINTS ---
+
+// Full snapshot (for initial load or detailed view)
 app.get('/pipeline-status', (req, res) => {
     const logger = getCurrentPipelineLogger();
     if (logger) {
-        res.json(logger.getRun());
+        // Support ?mode=lite query param
+        const mode = req.query.mode;
+        if (mode === 'lite') {
+            res.json(logger.getLiteSnapshot());
+        } else {
+            res.json(logger.getFullSnapshot());
+        }
     } else {
         res.json({ status: 'idle', message: 'No pipeline currently running' });
     }
 });
 
+// Lite snapshot (for frequent polling - every 1-2 seconds)
+app.get('/pipeline-status/lite', (req, res) => {
+    const logger = getCurrentPipelineLogger();
+    if (logger) {
+        res.json(logger.getLiteSnapshot());
+    } else {
+        res.json({ status: 'idle', message: 'No pipeline currently running' });
+    }
+});
+
+// Step details (fetch full data only when user expands a step)
+app.get('/pipeline-status/step/:stepId', (req, res) => {
+    const logger = getCurrentPipelineLogger();
+    if (logger) {
+        const step = logger.getStepDetails(req.params.stepId);
+        if (step) {
+            res.json(step);
+        } else {
+            res.status(404).json({ error: 'Step not found' });
+        }
+    } else {
+        res.status(404).json({ error: 'No pipeline running' });
+    }
+});
+
+// Legacy endpoint for compatibility
 app.get('/pipeline-status/current', (req, res) => {
     const logger = getCurrentPipelineLogger();
     if (logger) {
-        res.json(logger.getRun());
+        res.json(logger.getFullSnapshot());
     } else {
         res.json({ status: 'idle', message: 'No pipeline currently running' });
     }
@@ -1140,14 +1174,19 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
     };
 
     // Wrap step execution with pipeline logging
-    const runLoggedStep = async (stepId: string, input: any, executor: () => Promise<any>, meta?: Record<string, any>) => {
-        pipelineLogger.startStep(stepId, input);
+    const runLoggedStep = async (
+        stepConfig: { name: string; order: number; stepKey?: string },
+        input: any,
+        executor: () => Promise<any>,
+        meta?: Record<string, any>
+    ) => {
+        const stepId = pipelineLogger.startStep(stepConfig, input);
         try {
             const result = await executor();
-            pipelineLogger.endStep(result, meta);
+            pipelineLogger.endStep(stepId, result, meta);
             return result;
         } catch (error) {
-            pipelineLogger.failStep(error instanceof Error ? error : new Error(String(error)));
+            pipelineLogger.failStep(stepId, error instanceof Error ? error : new Error(String(error)));
             throw error;
         }
     };
