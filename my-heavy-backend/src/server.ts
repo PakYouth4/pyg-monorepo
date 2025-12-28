@@ -1275,11 +1275,25 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
             canSkip: false
         });
 
+        // Get the report data from step13
+        const reportData = step13.data;
+
         await orchestrator.log('workflow', 'V2 Pipeline Completed Successfully', 'success');
         await orchestrator.finalize(true);
 
-        // Update Firestore report status to 'completed'
-        await db.collection('reports').doc(reportId).update({ status: 'completed' });
+        // Save complete report to Firestore
+        await db.collection('reports').doc(reportId).update({
+            status: 'completed',
+            // Report content
+            report_id: reportData?.report_id,
+            formatted_report: reportData?.formatted_report,
+            quality_check: reportData?.quality_check,
+            data: reportData?.data,
+            audit_log: reportData?.audit_log,
+            generated_at: reportData?.generated_at,
+            // Additional metadata
+            completedAt: new Date().toISOString()
+        });
 
         console.log(`[V3 Orchestrator] ✅ Sending success response for reportId: ${reportId}`);
         res.json({ success: true, reportId, logs: orchestrator.getHistory() });
