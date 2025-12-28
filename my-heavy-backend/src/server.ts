@@ -34,7 +34,7 @@ const PORT = process.env.PORT || 7860; // Hugging Face Spaces default port
 
 // --- HEALTH CHECK ---
 app.get('/', (req, res) => {
-    res.send('Heavy Backend V5.2 (Optimized LLM Usage) Online 🚀');
+    res.send('Heavy Backend V5.3 (Model Chain Dec-28) Online 🚀');
 });
 
 // --- PREFLIGHT CHECK ---

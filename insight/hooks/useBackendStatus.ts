@@ -9,7 +9,7 @@ export interface BackendStatus {
     lastChecked: Date | null;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://pakyouth-heavy-backend.hf.space';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://pakyouth-insightbackend.hf.space';
 
 export function useBackendStatus(pingInterval: number = 10000) { // Reduced from 30s to 10s
     const [status, setStatus] = useState<BackendStatus>({
