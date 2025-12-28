@@ -23,73 +23,100 @@ interface ModelConfig {
 }
 
 // ============ TASK-SPECIFIC MODEL CHAINS ============
-// Each task has PRIMARY → ALT1 → ALT2 fallback
+// Based on user's optimized assignments (Dec 2025)
+// Each task has PRIMARY → FALLBACK1 → FALLBACK2
 
 export const TASK_MODELS = {
-    // Fast/Simple tasks
+    // Step 1 & Step 6: Fast/Simple keyword generation
     KEYWORDS: [
-        { provider: 'groq', model: 'llama-3.1-8b-instant' },
-        { provider: 'openrouter', model: 'qwen/qwen3-4b:free' },
-        { provider: 'openrouter', model: 'google/gemma-3-4b-it:free' }
+        { provider: 'groq', model: 'llama-3.1-8b-instant' },           // Primary: Fast, high rate limit
+        { provider: 'openrouter', model: 'google/gemma-2-9b-it:free' }, // Fallback: Good JSON adherence
+        { provider: 'openrouter', model: 'meta-llama/llama-3.2-3b-instruct:free' } // Fallback: Very lightweight
     ],
 
+    // Step 6: Video queries (same as keywords)
     QUERIES: [
         { provider: 'groq', model: 'llama-3.1-8b-instant' },
-        { provider: 'openrouter', model: 'mistralai/mistral-7b-instruct:free' },
-        { provider: 'groq', model: 'llama-3.3-70b-versatile' }
+        { provider: 'openrouter', model: 'google/gemma-2-9b-it:free' },
+        { provider: 'openrouter', model: 'meta-llama/llama-3.2-3b-instruct:free' }
     ],
 
-    // Medium tasks
+    // Step 4: Extract structure from messy HTML (needs 70B intelligence)
     STRUCTURE: [
-        { provider: 'openrouter', model: 'mistralai/mistral-small-3.1-24b-instruct:free' },
-        { provider: 'groq', model: 'llama-3.3-70b-versatile' },
-        { provider: 'openrouter', model: 'qwen/qwen3-235b-a22b:free' }
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' },        // Primary: Handles messy text
+        { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' }, // 1M context fallback
+        { provider: 'openrouter', model: 'qwen/qwen-2.5-72b-instruct:free' }   // SOTA for JSON extraction
     ],
 
+    // Step 5: Summarize (called 5x parallel, needs efficient model)
     SUMMARIZE: [
-        { provider: 'openrouter', model: 'qwen/qwen3-235b-a22b:free' },
-        { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' },
-        { provider: 'groq', model: 'llama-3.3-70b-versatile' }
+        { provider: 'groq', model: 'llama-3.1-8b-instant' },           // Primary: Handles burst requests
+        { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' }, // 1M context
+        { provider: 'openrouter', model: 'mistralai/mistral-nemo:free' }       // Good at summarization
     ],
 
-    NORMALIZE: [
-        { provider: 'openrouter', model: 'mistralai/mistral-small-3.1-24b-instruct:free' },
-        { provider: 'groq', model: 'qwen/qwen3-32b' },
-        { provider: 'openrouter', model: 'qwen/qwen3-coder:free' }
-    ],
-
-    // Heavy reasoning tasks
+    // Step 9: Merge/Enrich (classification)
     CLASSIFY: [
-        { provider: 'openrouter', model: 'allenai/olmo-3-32b-think:free' },
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' },        // Needs reasoning for credibility
+        { provider: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free' }, // Same model, different provider
+        { provider: 'openrouter', model: 'nvidia/llama-3.1-nemotron-70b-instruct:free' } // Good at categorization
+    ],
+
+    // Step 11a: Extract Key Facts (HUGE CONTEXT - needs 1M tokens)
+    EXTRACT_FACTS: [
+        { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' }, // Primary: 1M context essential
+        { provider: 'openrouter', model: 'qwen/qwen-2.5-72b-instruct:free' },  // 32k-128k context
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' }                 // 128k context last resort
+    ],
+
+    // Step 11b & 11d: Geopolitics & Risk Analysis (needs reasoning/CoT)
+    REASONING: [
+        { provider: 'openrouter', model: 'deepseek/deepseek-r1:free' },        // Primary: Chain of Thought
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' },                 // Fallback: Strong world knowledge
+        { provider: 'openrouter', model: 'qwen/qwen-2.5-72b-instruct:free' }   // Fallback: Good logic
+    ],
+
+    // Step 11c: Islamic Perspective (needs cultural nuance)
+    ISLAMIC: [
+        { provider: 'openrouter', model: 'qwen/qwen-2.5-72b-instruct:free' },  // Primary: Less Western-centric
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' },                 // Fallback: Needs careful prompting
+        { provider: 'openrouter', model: 'google/gemma-2-27b-it:free' }        // Fallback: Safety-tuned
+    ],
+
+    // Step 11e: Recommendations (needs synthesis + actionable output)
+    RECOMMENDATIONS: [
+        { provider: 'openrouter', model: 'deepseek/deepseek-r1:free' },        // Primary: Good for planning
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' },                 // Fallback: Reliable
+        { provider: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free' }
+    ],
+
+    // Step 12: Creative content ideas
+    CONTENT_IDEAS: [
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' },                 // Primary: Natural "chatty" tone
+        { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' }, // Fallback: Creative
+        { provider: 'openrouter', model: 'nousresearch/hermes-3-llama-3.1-405b:free' } // Fallback: Engaging
+    ],
+
+    // Legacy/Default (keeping for backward compatibility)
+    DEEP_ANALYSIS: [
+        { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' },
         { provider: 'groq', model: 'llama-3.3-70b-versatile' },
-        { provider: 'openrouter', model: 'qwen/qwen3-235b-a22b:free' }
+        { provider: 'openrouter', model: 'deepseek/deepseek-r1:free' }
     ],
 
     VERIFY: [
-        { provider: 'openrouter', model: 'allenai/olmo-3-32b-think:free' },
-        { provider: 'openrouter', model: 'openai/gpt-oss-120b:free' },
-        { provider: 'groq', model: 'llama-3.3-70b-versatile' }
-    ],
-
-    DEEP_ANALYSIS: [
         { provider: 'groq', model: 'llama-3.3-70b-versatile' },
-        { provider: 'openrouter', model: 'qwen/qwen3-235b-a22b:free' },
-        { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' },
-        { provider: 'openrouter', model: 'allenai/olmo-3-32b-think:free' }
-    ],
-
-    CONTENT_IDEAS: [
-        { provider: 'groq', model: 'llama-3.1-8b-instant' },
-        { provider: 'openrouter', model: 'qwen/qwen3-235b-a22b:free' },
         { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' }
     ],
 
-    // Huge context tasks
+    NORMALIZE: [
+        { provider: 'groq', model: 'llama-3.1-8b-instant' },
+        { provider: 'openrouter', model: 'mistralai/mistral-nemo:free' }
+    ],
+
     REPORT: [
         { provider: 'groq', model: 'llama-3.3-70b-versatile' },
-        { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' },
-        { provider: 'openrouter', model: 'amazon/nova-2-lite-v1:free' },
-        { provider: 'openrouter', model: 'qwen/qwen3-coder:free' }
+        { provider: 'openrouter', model: 'google/gemini-2.0-flash-exp:free' }
     ]
 } as const;
 

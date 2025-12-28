@@ -128,7 +128,7 @@ Extract 5-10 key factual claims from these sources.
 
     try {
         const response = await callLLM({
-            task: 'DEEP_ANALYSIS',
+            task: 'EXTRACT_FACTS',
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
@@ -210,7 +210,7 @@ Provide comprehensive geopolitical analysis.
 
     try {
         const response = await callLLM({
-            task: 'DEEP_ANALYSIS',
+            task: 'REASONING',
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
@@ -282,7 +282,7 @@ Provide an Islamic ethical perspective on this situation.
 
     try {
         const response = await callLLM({
-            task: 'DEEP_ANALYSIS',
+            task: 'ISLAMIC',
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
@@ -358,7 +358,7 @@ Generate risk assessment and predictions.
 
     try {
         const response = await callLLM({
-            task: 'DEEP_ANALYSIS',
+            task: 'REASONING',
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
@@ -433,7 +433,7 @@ Generate recommendations and humanitarian impact assessment.
 
     try {
         const response = await callLLM({
-            task: 'DEEP_ANALYSIS',
+            task: 'RECOMMENDATIONS',
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
