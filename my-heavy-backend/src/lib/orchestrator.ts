@@ -287,6 +287,7 @@ Respond with JSON:
 
                 // Handle AI decision
                 if (aiDecision.decision === 'continue') {
+                    await this.analyzeStep(name, true, lastEvaluation);
                     return {
                         success: true,
                         data: result,
@@ -312,6 +313,7 @@ Respond with JSON:
                 if (aiDecision.decision === 'fallback' && fallback) {
                     await this.log(name, 'Using fallback strategy', 'warning');
                     const fallbackResult = await fallback();
+                    await this.analyzeStep(name, true, { quality: 'partial', issue: 'Used fallback' });
                     return {
                         success: true,
                         data: fallbackResult,
@@ -324,6 +326,7 @@ Respond with JSON:
                 // Skip
                 if (canSkip) {
                     await this.log(name, `Skipping step: ${aiDecision.reason}`, 'warning');
+                    await this.analyzeStep(name, false, lastEvaluation);
                     return {
                         success: false,
                         data: result,
@@ -349,6 +352,7 @@ Respond with JSON:
 
                 if (canSkip) {
                     await this.log(name, 'Max retries reached, skipping step', 'error');
+                    await this.analyzeStep(name, false, lastEvaluation);
                     return {
                         success: false,
                         data: null as T,
