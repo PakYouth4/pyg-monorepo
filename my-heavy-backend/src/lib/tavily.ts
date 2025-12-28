@@ -73,8 +73,7 @@ export async function searchTavilyV2(keywords: string[]): Promise<SearchResult[]
 
     // Log search results for quality review
     console.log(`[Search] Found ${allResults.length} unique articles:`);
-    allResults.slice(0, 10).forEach((r, i) => console.log(`  ${i + 1}. ${r.title?.substring(0, 60)}... | ${r.url}`));
-    if (allResults.length > 10) console.log(`  ... and ${allResults.length - 10} more`);
+    allResults.forEach((r, i) => console.log(`  ${i + 1}. ${r.title?.substring(0, 60)}... | ${r.url}`));
 
     return allResults;
 }
