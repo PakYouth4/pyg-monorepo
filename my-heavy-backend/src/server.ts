@@ -1262,8 +1262,8 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
         const step13 = await orchestrator.runStep({
             name: 'step13_report',
             evaluate: (data: any) => {
-                if (!data?.report) return { quality: 'error' as const, issue: 'No report generated' };
-                return { quality: 'good' as const, metrics: { reportId: reportId } };
+                if (!data?.report_id && !data?.id) return { quality: 'error' as const, issue: 'No report ID returned' };
+                return { quality: 'good' as const, metrics: { reportId: data.report_id } };
             },
             execute: async () => callEndpoint('/v2/step13-report', {
                 topic,
