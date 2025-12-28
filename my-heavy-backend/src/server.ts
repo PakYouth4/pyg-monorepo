@@ -23,6 +23,9 @@ import { runDeepAnalysis } from './lib/groqDeepAnalysis';
 import { generateContentIdeas } from './lib/groqContentIdeas';
 import { assembleReport } from './lib/reportAssembler';
 import { runPreflightChecks } from './lib/utils';
+import { getCurrentPipelineLogger } from './lib/pipelineLogger';
+
+import path from 'path';
 
 dotenv.config();
 
@@ -30,11 +33,38 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
+// Serve static files (dashboard)
+app.use('/static', express.static(path.join(__dirname, '../public')));
+
 const PORT = process.env.PORT || 7860; // Hugging Face Spaces default port
 
 // --- HEALTH CHECK ---
 app.get('/', (req, res) => {
     res.send('Heavy Backend V5.3 (Model Chain Dec-28) Online 🚀');
+});
+
+// --- PIPELINE STATUS ENDPOINTS ---
+app.get('/pipeline-status', (req, res) => {
+    const logger = getCurrentPipelineLogger();
+    if (logger) {
+        res.json(logger.getRun());
+    } else {
+        res.json({ status: 'idle', message: 'No pipeline currently running' });
+    }
+});
+
+app.get('/pipeline-status/current', (req, res) => {
+    const logger = getCurrentPipelineLogger();
+    if (logger) {
+        res.json(logger.getRun());
+    } else {
+        res.json({ status: 'idle', message: 'No pipeline currently running' });
+    }
+});
+
+// Dashboard redirect for easy access
+app.get('/dashboard', (req, res) => {
+    res.redirect('/static/dashboard.html');
 });
 
 // --- PREFLIGHT CHECK ---
@@ -1072,8 +1102,12 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
         return res.status(400).json({ error: 'Topic and reportId are required' });
     }
 
-    // Import orchestrator
+    // Import orchestrator and pipeline logger
     const { createOrchestrator } = await import('./lib/orchestrator');
+    const { createPipelineLogger, clearPipelineLogger } = await import('./lib/pipelineLogger');
+
+    // Create pipeline logger for this run
+    const pipelineLogger = createPipelineLogger(reportId, topic);
 
     const orchestrator = createOrchestrator({
         reportId,
@@ -1082,7 +1116,7 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
         verbose: true
     });
 
-    // Helper to call internal endpoints
+    // Helper to call internal endpoints with logging
     const callEndpoint = async (path: string, body: any): Promise<any> => {
         const baseUrl = `http://localhost:${PORT}`;
         const response = await fetch(`${baseUrl}${path}`, {
@@ -1103,6 +1137,19 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
         const keys = Object.keys(data);
         if (keys.length === 0) return { quality: 'empty' as const, issue: 'Empty object' };
         return { quality: 'good' as const, metrics: { keys: keys.length } };
+    };
+
+    // Wrap step execution with pipeline logging
+    const runLoggedStep = async (stepId: string, input: any, executor: () => Promise<any>, meta?: Record<string, any>) => {
+        pipelineLogger.startStep(stepId, input);
+        try {
+            const result = await executor();
+            pipelineLogger.endStep(result, meta);
+            return result;
+        } catch (error) {
+            pipelineLogger.failStep(error instanceof Error ? error : new Error(String(error)));
+            throw error;
+        }
     };
 
     try {
@@ -1281,6 +1328,9 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
         await orchestrator.log('workflow', 'V2 Pipeline Completed Successfully', 'success');
         await orchestrator.finalize(true);
 
+        // Finalize pipeline logger
+        const pipelineRun = pipelineLogger.endRun('completed');
+
         // Save complete report to Firestore
         await db.collection('reports').doc(reportId).update({
             status: 'completed',
@@ -1295,25 +1345,50 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
             quality_check: reportData?.quality_check,
             sources: reportData?.data?.sources,
             generated_at: reportData?.generated_at,
-            completedAt: new Date().toISOString()
+            completedAt: new Date().toISOString(),
+            // Pipeline metrics
+            pipelineSummary: pipelineRun.summary
         });
 
         console.log(`[V3 Orchestrator] ✅ Sending success response for reportId: ${reportId}`);
-        res.json({ success: true, reportId, logs: orchestrator.getHistory() });
+        res.json({
+            success: true,
+            reportId,
+            logs: orchestrator.getHistory(),
+            pipeline: pipelineRun  // Include full pipeline log
+        });
+
+        // Clear the singleton after sending response
+        clearPipelineLogger();
 
     } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         await orchestrator.log('workflow', `Pipeline Failed: ${errorMsg}`, 'error');
         await orchestrator.finalize(false);
 
+        // Finalize pipeline logger with failure
+        const pipelineRun = pipelineLogger.endRun('failed');
+
         // Update Firestore report status to 'failed'
         try {
-            await db.collection('reports').doc(reportId).update({ status: 'failed', error: errorMsg });
+            await db.collection('reports').doc(reportId).update({
+                status: 'failed',
+                error: errorMsg,
+                pipelineSummary: pipelineRun.summary
+            });
         } catch (e) {
             console.error('[V3 Orchestrator] Failed to update report status:', e);
         }
 
-        res.status(500).json({ success: false, error: errorMsg, logs: orchestrator.getHistory() });
+        res.status(500).json({
+            success: false,
+            error: errorMsg,
+            logs: orchestrator.getHistory(),
+            pipeline: pipelineRun  // Include pipeline log even on failure
+        });
+
+        // Clear the singleton
+        clearPipelineLogger();
     }
 });
 app.listen(PORT, () => {
