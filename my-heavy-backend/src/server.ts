@@ -1278,12 +1278,24 @@ app.post('/v3/orchestrated-workflow', async (req, res) => {
         await orchestrator.log('workflow', 'V2 Pipeline Completed Successfully', 'success');
         await orchestrator.finalize(true);
 
+        // Update Firestore report status to 'completed'
+        await db.collection('reports').doc(reportId).update({ status: 'completed' });
+
+        console.log(`[V3 Orchestrator] ✅ Sending success response for reportId: ${reportId}`);
         res.json({ success: true, reportId, logs: orchestrator.getHistory() });
 
     } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         await orchestrator.log('workflow', `Pipeline Failed: ${errorMsg}`, 'error');
         await orchestrator.finalize(false);
+
+        // Update Firestore report status to 'failed'
+        try {
+            await db.collection('reports').doc(reportId).update({ status: 'failed', error: errorMsg });
+        } catch (e) {
+            console.error('[V3 Orchestrator] Failed to update report status:', e);
+        }
+
         res.status(500).json({ success: false, error: errorMsg, logs: orchestrator.getHistory() });
     }
 });
